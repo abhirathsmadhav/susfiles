@@ -12,12 +12,14 @@ interface FilterBarProps {
   selectedType: CardType | null;
 }
 
-const CARD_TYPES: CardType[] = ['quote', 'convo', 'image', 'moment', 'text'];
+const CARD_TYPES: CardType[] = ['quote', 'convo', 'image', 'audio', 'video', 'moment', 'text'];
 
 const TYPE_ICONS: Record<CardType, string> = {
   quote: '💬',
   convo: '🗣️',
   image: '📸',
+  audio: '🎵',
+  video: '🎥',
   moment: '⚡',
   text: '📝',
 };
