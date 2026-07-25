@@ -34,6 +34,12 @@ export default function RootLayout({
                 },
               }}
             />
+            <div className="fixed bottom-20 md:bottom-4 left-2 md:left-4 font-mono text-[10px] md:text-xs font-bold opacity-60 z-[999]" style={{ textShadow: '1px 1px 0px #fff' }}>
+              <a href="/legal" className="hover:underline hover:text-hot-pink transition-colors">LEGAL / PRIVACY</a>
+            </div>
+            <div className="fixed bottom-20 md:bottom-4 right-2 md:right-4 font-mono text-[10px] md:text-xs font-bold opacity-40 pointer-events-none z-[999]" style={{ textShadow: '1px 1px 0px #fff' }}>
+              DEVELOPED BY GHOST
+            </div>
           </AuthProvider>
         </ThemeProvider>
       </body>
