@@ -68,6 +68,7 @@ export default function FriendPage({ params }: Props) {
               nickname: uData.callSign || (uData.username ? `@${uData.username}` : undefined),
               avatarUrl: uData.avatarUrl,
               signatureColor: uData.signatureColor || '#F5F500',
+              tagline: uData.tagline || '',
               createdAt: uData.createdAt,
             };
             isRegisteredUser = true;

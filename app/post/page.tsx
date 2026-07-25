@@ -46,6 +46,7 @@ export default function PostPage() {
               nickname: data.callSign || `@${data.username}`,
               avatarUrl: data.avatarUrl,
               signatureColor: data.signatureColor || '#F5F500',
+              tagline: data.tagline || '',
               createdAt: data.createdAt,
             };
           });
