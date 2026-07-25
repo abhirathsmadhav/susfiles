@@ -1,0 +1,50 @@
+// ============================================================
+// The Sus Files — Firestore Security Rules
+// ============================================================
+// Paste these into Firebase Console > Firestore > Rules tab
+// ============================================================
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper: check if the requesting user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // ========================
+    // Users collection
+    // ========================
+    match /users/{uid} {
+      // Users can read/write their own doc
+      allow read: if request.auth.uid == uid || isAuthenticated();
+      allow create, update: if request.auth.uid == uid;
+      allow delete: if false;
+    }
+
+    // ========================
+    // Friends collection
+    // ========================
+    match /friends/{friendId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // ========================
+    // Cards collection
+    // ========================
+    match /cards/{cardId} {
+      allow read, write: if isAuthenticated();
+    }
+    
+    // ========================
+    // Usernames collection (Unique enforcement)
+    // ========================
+    match /usernames/{username} {
+      allow read: if isAuthenticated();
+      // Only allow creating if claiming for yourself
+      allow create: if isAuthenticated() && request.resource.data.uid == request.auth.uid;
+      allow delete: if isAuthenticated() && resource.data.uid == request.auth.uid;
+    }
+  }
+}

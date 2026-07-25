@@ -1,0 +1,307 @@
+@import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=Space+Grotesk:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================
+   THE SUS FILES — NEO-BRUTALIST DESIGN SYSTEM
+   ============================================================ */
+
+:root {
+  --shadow-hard: 6px 6px 0px #000;
+  --shadow-hard-sm: 4px 4px 0px #000;
+  --shadow-hard-lg: 8px 8px 0px #000;
+  --shadow-hard-pressed: 2px 2px 0px #000;
+  --border-brutal: 3px solid #000;
+  --border-brutal-thick: 5px solid #000;
+
+  /* Signature palette */
+  --acid-yellow: #F5F500;
+  --hot-pink: #FF2D78;
+  --electric-blue: #0066FF;
+  --lime-green: #39FF14;
+  --brutal-orange: #FF5F1F;
+  --brutal-purple: #9000FF;
+  --off-white: #FAFAF5;
+  --brutal-black: #0A0A0A;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 500;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ============================================================
+   TYPOGRAPHY
+   ============================================================ */
+
+h1, h2, h3, .font-brutal {
+  font-family: 'Archivo Black', sans-serif;
+  letter-spacing: -0.03em;
+}
+
+.font-mono-brutal {
+  font-family: 'Space Mono', monospace;
+}
+
+/* ============================================================
+   BRUTALIST UTILITY CLASSES
+   ============================================================ */
+
+@layer components {
+  /* --- Buttons --- */
+  .btn-brutal {
+    @apply inline-flex items-center justify-center gap-2 px-5 py-3 font-bold uppercase tracking-wider text-sm border-[3px] border-black bg-[#F5F500] text-black cursor-pointer select-none;
+    box-shadow: var(--shadow-hard);
+    transition: box-shadow 80ms ease, transform 80ms ease;
+    font-family: 'Archivo Black', sans-serif;
+    letter-spacing: 0.05em;
+  }
+  .btn-brutal:hover {
+    box-shadow: var(--shadow-hard-lg);
+    transform: translate(-2px, -2px);
+  }
+  .btn-brutal:active {
+    box-shadow: var(--shadow-hard-pressed);
+    transform: translate(4px, 4px);
+  }
+  .btn-brutal-pink {
+    @apply btn-brutal bg-[#FF2D78] text-white;
+  }
+  .btn-brutal-blue {
+    @apply btn-brutal bg-[#0066FF] text-white;
+  }
+  .btn-brutal-black {
+    @apply btn-brutal bg-black text-[#F5F500];
+  }
+  .btn-brutal-lime {
+    @apply btn-brutal bg-[#39FF14] text-black;
+  }
+  .btn-brutal-sm {
+    @apply btn-brutal px-3 py-1.5 text-xs;
+    box-shadow: var(--shadow-hard-sm);
+  }
+  .btn-brutal-sm:hover {
+    box-shadow: 5px 5px 0px #000;
+    transform: translate(-1px, -1px);
+  }
+  .btn-brutal-sm:active {
+    box-shadow: 1px 1px 0px #000;
+    transform: translate(3px, 3px);
+  }
+
+  /* --- Inputs --- */
+  .input-brutal {
+    @apply w-full px-4 py-3 border-[3px] border-black dark:border-white bg-white dark:bg-brutal-black text-black dark:text-white font-medium text-base outline-none;
+    box-shadow: var(--shadow-hard-sm);
+    font-family: 'Space Grotesk', sans-serif;
+    transition: box-shadow 80ms ease, transform 80ms ease;
+  }
+  .input-brutal:focus {
+    box-shadow: var(--shadow-hard);
+    transform: translate(-1px, -1px);
+  }
+
+  /* --- Cards --- */
+  .card-brutal {
+    @apply border-[3px] border-black dark:border-white bg-white dark:bg-[#1A1A1A] p-4;
+    box-shadow: var(--shadow-hard);
+    transition: box-shadow 100ms ease, transform 100ms ease;
+  }
+  .card-brutal:hover {
+    box-shadow: var(--shadow-hard-lg);
+    transform: translate(-2px, -2px);
+  }
+
+  /* --- Section / Panel --- */
+  .panel-brutal {
+    @apply border-[3px] border-black dark:border-white bg-white dark:bg-[#1A1A1A] p-6;
+    box-shadow: var(--shadow-hard);
+  }
+
+  /* --- Tag / Badge --- */
+  .tag-brutal {
+    @apply inline-flex items-center px-2 py-0.5 text-xs font-bold border-[2px] border-black dark:border-white uppercase tracking-wide;
+    font-family: 'Archivo Black', sans-serif;
+    box-shadow: 2px 2px 0px #000;
+  }
+}
+
+/* ============================================================
+   WALL CARD ANIMATIONS
+   ============================================================ */
+
+@keyframes jiggle {
+  0%, 100% { transform: rotate(var(--card-rotation, 0deg)) scale(1); }
+  25% { transform: rotate(calc(var(--card-rotation, 0deg) + 2deg)) scale(1.02); }
+  75% { transform: rotate(calc(var(--card-rotation, 0deg) - 2deg)) scale(1.02); }
+}
+
+@keyframes popIn {
+  0% { transform: scale(0.85) rotate(var(--card-rotation, 0deg)); opacity: 0; }
+  60% { transform: scale(1.05) rotate(var(--card-rotation, 0deg)); opacity: 1; }
+  100% { transform: scale(1) rotate(var(--card-rotation, 0deg)); opacity: 1; }
+}
+
+@keyframes shuffleOut {
+  0% { opacity: 1; transform: scale(1) rotate(var(--card-rotation, 0deg)); }
+  50% { opacity: 0; transform: scale(0.8) rotate(calc(var(--card-rotation, 0deg) + 15deg)); }
+  100% { opacity: 0; transform: scale(0.8) rotate(var(--card-rotation, 0deg)); }
+}
+
+@keyframes slideUp {
+  0% { transform: translateY(20px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.wall-card {
+  animation: popIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.wall-card:hover {
+  animation: jiggle 0.3s ease;
+  z-index: 50 !important;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.3s ease forwards;
+}
+
+@keyframes marquee {
+  0% { transform: translateX(0%); }
+  100% { transform: translateX(-50%); }
+}
+
+.animate-marquee {
+  animation: marquee 30s linear infinite;
+  display: flex;
+  white-space: nowrap;
+}
+
+/* ============================================================
+   PUSHPIN / TAPE DECORATIONS
+   ============================================================ */
+
+.pushpin::before {
+  content: '📌';
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 1.4rem;
+  z-index: 10;
+}
+
+.tape-corner::before {
+  content: '';
+  position: absolute;
+  top: -6px;
+  left: 20px;
+  width: 60px;
+  height: 14px;
+  background: rgba(255, 255, 150, 0.75);
+  border: 2px solid rgba(0,0,0,0.3);
+  transform: rotate(-2deg);
+  z-index: 10;
+}
+
+/* ============================================================
+   SCROLLBAR STYLING
+   ============================================================ */
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--off-white);
+  border-left: 2px solid #000;
+}
+::-webkit-scrollbar-thumb {
+  background: #000;
+}
+
+/* ============================================================
+   MODAL OVERLAY
+   ============================================================ */
+
+.modal-overlay {
+  @apply fixed inset-0 z-[9999] flex items-center justify-center p-4;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(4px);
+  animation: slideUp 0.2s ease forwards;
+}
+
+/* ============================================================
+   MASONRY GRID STYLES
+   ============================================================ */
+
+.my-masonry-grid {
+  display: flex;
+  margin-left: -30px; /* gutter size offset */
+  width: auto;
+}
+
+.my-masonry-grid_column {
+  padding-left: 30px; /* gutter size */
+  background-clip: padding-box;
+}
+
+/* Style your items */
+.my-masonry-grid_column > div {
+  margin-bottom: 30px;
+}
+
+/* Mobile layout overrides (Reddit style feed) */
+@media (max-width: 768px) {
+  .my-masonry-grid {
+    margin-left: 0;
+  }
+  .my-masonry-grid_column {
+    padding-left: 0;
+  }
+  .my-masonry-grid_column > div {
+    margin-bottom: 20px;
+  }
+}
+
+/* ============================================================
+   ADMIN DARK THEME OVERRIDES
+   ============================================================ */
+
+.admin-theme {
+  background-color: #0A0A0A;
+  color: #FAFAF5;
+}
+
+.admin-theme .card-brutal {
+  background-color: #1A1A1A;
+  border-color: #444;
+  color: #FAFAF5;
+  box-shadow: 6px 6px 0px #F5F500;
+}
+
+.admin-theme .input-brutal {
+  background-color: #1A1A1A;
+  border-color: #444;
+  color: #FAFAF5;
+}
+
+.admin-theme .input-brutal:focus {
+  border-color: #F5F500;
+  box-shadow: 4px 4px 0px #F5F500;
+}
