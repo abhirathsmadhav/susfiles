@@ -90,10 +90,9 @@ export default function CardModal({ card, friends, onClose }: CardModalProps) {
             </div>
           )}
 
-          {/* Video */}
           {card.type === 'video' && card.videoUrl && (
             <div className="border-[3px] border-black overflow-hidden bg-black">
-              <video src={card.videoUrl} controls className="w-full max-h-72 object-contain" />
+              <video src={card.videoUrl} controls className="w-full aspect-square object-cover" />
             </div>
           )}
 

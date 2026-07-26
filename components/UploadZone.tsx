@@ -175,7 +175,7 @@ export default function UploadZone({ onUpload, currentUrl, acceptAudio = true }:
       {preview && !uploading && preview !== 'AUDIO_UPLOADING' && (
         <div className="relative border-[3px] border-black overflow-hidden bg-white" style={{ boxShadow: '4px 4px 0px #000' }}>
           {fileType === 'video' ? (
-            <video src={preview} controls className="w-full max-h-48 bg-black" />
+            <video src={preview} controls className="w-full aspect-square object-cover bg-black" />
           ) : fileType === 'image' ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={preview} alt="Preview" className="w-full max-h-48 object-contain bg-black" />

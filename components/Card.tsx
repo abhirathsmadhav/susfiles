@@ -107,10 +107,9 @@ export default function Card({ card, friends, onClick, isFeatured, style, classN
           </div>
         )}
 
-        {/* Video */}
         {card.type === 'video' && card.videoUrl && (
           <div className="w-full border-b-[2px] border-black bg-black">
-            <video src={card.videoUrl} controls className="w-full h-full max-h-56 object-contain" onClick={(e) => e.stopPropagation()} />
+            <video src={card.videoUrl} controls className="w-full aspect-square object-cover" onClick={(e) => e.stopPropagation()} />
           </div>
         )}
 
