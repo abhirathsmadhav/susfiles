@@ -36,5 +36,21 @@ module.exports = {
       },
     },
   },
-  plugins: [],
+  plugins: [
+    // Hide scrollbar utility (.no-scrollbar) — keeps scroll, hides the bar
+    function ({ addUtilities }) {
+      addUtilities({
+        '.no-scrollbar': {
+          '-ms-overflow-style': 'none',
+          'scrollbar-width': 'none',
+          '&::-webkit-scrollbar': {
+            display: 'none',
+          },
+        },
+        '.pb-safe': {
+          'padding-bottom': 'env(safe-area-inset-bottom, 0px)',
+        },
+      });
+    },
+  ],
 };

@@ -4,15 +4,22 @@ import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
 import { useRouter, usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
-import { FolderSearch, LayoutGrid, Users, PlusCircle, UserPlus, LogIn, LogOut, User, Ghost } from 'lucide-react';
+import {
+  FolderSearch,
+  LayoutGrid,
+  Users,
+  PlusCircle,
+  UserPlus,
+  LogIn,
+  LogOut,
+  User,
+} from 'lucide-react';
 import toast from 'react-hot-toast';
-import { useTheme } from 'next-themes';
 
 export default function Nav() {
   const { user, isGuest, logout } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
-  const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => setMounted(true), []);
@@ -24,29 +31,35 @@ export default function Nav() {
     router.push('/');
   };
 
-  const navLinks = [
-    { href: '/', label: 'THE WALL', icon: <LayoutGrid className="w-5 h-5 mr-1 inline" /> },
-    { href: '/friends', label: 'THE CREW', icon: <Users className="w-5 h-5 mr-1 inline" /> },
-  ];
+  if (!mounted) return null;
+
+  const isActive = (href: string) => pathname === href;
 
   return (
     <>
-      {/* --- DESKTOP BRUTALIST NAV --- */}
-      <nav className="hidden md:flex sticky top-0 z-[100] w-full items-center justify-between px-6 py-4 bg-acid-yellow dark:bg-black border-b-[4px] border-black dark:border-white shadow-[0_4px_0_0_#000] dark:shadow-[0_4px_0_0_#fff] transition-colors duration-300">
-        <div className="flex items-center gap-6">
-          <Link href="/" className="font-brutal text-3xl tracking-tight hover:skew-x-[-3deg] transition-transform duration-100 dark:text-acid-yellow flex items-center gap-2">
-            <FolderSearch className="w-8 h-8" strokeWidth={3} /> SUS FILES
+      {/* ===== DESKTOP NAV ===== */}
+      <nav className="hidden md:flex sticky top-0 z-[100] w-full items-center justify-between px-6 py-3 bg-acid-yellow border-b-[4px] border-black shadow-[0_4px_0_0_#000] transition-colors duration-300">
+        <div className="flex items-center gap-5">
+          <Link
+            href="/"
+            className="font-brutal text-2xl tracking-tight hover:skew-x-[-3deg] transition-transform duration-100 flex items-center gap-2"
+          >
+            <FolderSearch className="w-7 h-7" strokeWidth={3} /> SUS FILES
           </Link>
 
-          <div className="flex items-center gap-2">
-            {navLinks.map((l) => (
+          <div className="flex items-center gap-1">
+            {[
+              { href: '/', label: 'THE WALL', icon: <LayoutGrid className="w-4 h-4" /> },
+              { href: '/friends', label: 'THE CREW', icon: <Users className="w-4 h-4" /> },
+            ].map((l) => (
               <Link
                 key={l.href}
                 href={l.href}
-                className={`px-4 py-2 font-bold uppercase text-sm tracking-wide border-[3px] border-transparent transition-all hover:border-black dark:hover:border-white hover:bg-black dark:hover:bg-white hover:text-acid-yellow dark:hover:text-black ${
-                  pathname === l.href ? 'border-black dark:border-white bg-black dark:bg-white text-acid-yellow dark:text-black' : 'dark:text-white'
+                className={`flex items-center gap-1 px-3 py-2 font-brutal text-xs uppercase tracking-wide border-[3px] border-transparent transition-all hover:border-black hover:bg-black hover:text-acid-yellow ${
+                  isActive(l.href)
+                    ? 'border-black bg-black text-acid-yellow'
+                    : ''
                 }`}
-                style={{ fontFamily: 'Archivo Black, sans-serif' }}
               >
                 {l.icon} {l.label}
               </Link>
@@ -54,119 +67,145 @@ export default function Nav() {
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          {/* Only show Add buttons if logged in */}
-          {user && (
-            <div className="flex items-center gap-2 mr-2">
+        <div className="flex items-center gap-2">
+          {user && !isGuest && (
+            <>
               <Link
                 href="/post"
-                className="px-4 py-2 font-bold uppercase text-sm tracking-wide border-[3px] border-black dark:border-white bg-lime-green dark:bg-black text-black dark:text-lime-green hover:bg-black hover:text-lime-green dark:hover:bg-white dark:hover:text-black transition-colors flex items-center gap-1"
-                style={{ fontFamily: 'Archivo Black, sans-serif' }}
+                className="flex items-center gap-1 px-3 py-2 font-brutal text-xs uppercase border-[3px] border-black bg-lime-green text-black hover:bg-black hover:text-lime-green transition-colors"
               >
                 <PlusCircle className="w-4 h-4" /> POST
               </Link>
               <Link
                 href="/suspects/new"
-                className="px-4 py-2 font-bold uppercase text-sm tracking-wide border-[3px] border-black dark:border-white bg-hot-pink dark:bg-black text-black dark:text-hot-pink hover:bg-black hover:text-hot-pink dark:hover:bg-white dark:hover:text-black transition-colors flex items-center gap-1"
-                style={{ fontFamily: 'Archivo Black, sans-serif' }}
+                className="flex items-center gap-1 px-3 py-2 font-brutal text-xs uppercase border-[3px] border-black bg-hot-pink text-white hover:bg-black hover:text-hot-pink transition-colors"
               >
                 <UserPlus className="w-4 h-4" /> SUSPECT
               </Link>
-            </div>
+            </>
           )}
-
-
 
           {user ? (
             <div className="flex items-center gap-2">
-              {isGuest && (
-                <Link
-                  href="/login"
-                  className="flex items-center gap-1 px-4 py-2 border-[3px] border-black dark:border-white font-brutal text-sm uppercase bg-white dark:bg-brutal-black hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-colors"
-                >
-                  <Ghost className="w-4 h-4" /> SIGN UP
-                </Link>
-              )}
               <Link
                 href="/profile"
-                className="flex items-center gap-1 px-4 py-2 border-[3px] border-black dark:border-white font-brutal text-sm uppercase bg-white dark:bg-brutal-black hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-colors"
+                className="flex items-center gap-1 px-3 py-2 font-brutal text-xs uppercase border-[3px] border-black bg-white hover:bg-black hover:text-white transition-colors"
               >
                 <User className="w-4 h-4" /> PROFILE
               </Link>
-              <button onClick={handleLogout} className="flex items-center gap-1 btn-brutal px-4 py-2 text-sm bg-white dark:bg-brutal-black dark:text-white dark:border-white hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black">
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-1 btn-brutal px-3 py-2 text-xs bg-white border-black hover:bg-black hover:text-white"
+              >
                 <LogOut className="w-4 h-4" /> LOG OUT
               </button>
             </div>
           ) : (
-            <Link href="/login" className="flex items-center gap-1 btn-brutal px-4 py-2 text-sm bg-white dark:bg-brutal-black dark:text-white dark:border-white hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black">
+            <Link
+              href="/login"
+              className="flex items-center gap-1 btn-brutal px-3 py-2 text-xs bg-white border-black hover:bg-black hover:text-white"
+            >
               <LogIn className="w-4 h-4" /> LOG IN
             </Link>
           )}
         </div>
       </nav>
 
-      {/* --- MOBILE BOTTOM TAB BAR --- */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-[100] flex items-center justify-around bg-acid-yellow dark:bg-black border-t-[3px] border-black dark:border-white pb-safe">
-        {navLinks.map((l) => (
+      {/* ===== MOBILE TOP BAR ===== */}
+      <header className="md:hidden sticky top-0 z-[100] flex items-center justify-between px-4 bg-acid-yellow border-b-[3px] border-black"
+        style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 10px)', paddingBottom: '10px' }}
+      >
+        <Link href="/" className="font-brutal text-xl tracking-tight flex items-center gap-1.5">
+          <FolderSearch className="w-5 h-5" strokeWidth={3} /> SUS FILES
+        </Link>
+        {user && !isGuest && (
+          <div className="flex items-center gap-1.5">
+            <Link
+              href="/post"
+              className="flex items-center gap-1 px-2.5 py-1.5 font-brutal text-[11px] uppercase border-[2px] border-black bg-lime-green text-black"
+              style={{ boxShadow: '2px 2px 0px #000' }}
+            >
+              <PlusCircle className="w-3.5 h-3.5" /> POST
+            </Link>
+            <Link
+              href="/suspects/new"
+              className="flex items-center gap-1 px-2.5 py-1.5 font-brutal text-[11px] uppercase border-[2px] border-black bg-hot-pink text-white"
+              style={{ boxShadow: '2px 2px 0px #000' }}
+            >
+              <UserPlus className="w-3.5 h-3.5" /> +SUSPECT
+            </Link>
+          </div>
+        )}
+        {!user && (
           <Link
-            key={l.href}
-            href={l.href}
-            className={`flex flex-col items-center justify-center flex-1 py-3 border-r-[3px] border-black dark:border-white last:border-r-0 transition-colors ${
-              pathname === l.href ? 'bg-black text-acid-yellow dark:bg-white dark:text-black' : 'dark:text-white hover:bg-black/10 dark:hover:bg-white/10'
-            }`}
+            href="/login"
+            className="flex items-center gap-1 px-3 py-1.5 font-brutal text-xs uppercase border-[2px] border-black bg-white"
+            style={{ boxShadow: '2px 2px 0px #000' }}
           >
-            <span className="text-xl mb-1">{l.href === '/' ? <LayoutGrid /> : <Users />}</span>
-            <span className="font-brutal text-[10px] leading-none uppercase">{l.label.split(' ').slice(1).join(' ')}</span>
-          </Link>
-        ))}
-
-
-
-        {user && (
-          <Link
-            href="/post"
-            className={`flex flex-col items-center justify-center flex-1 py-3 border-r-[3px] border-black dark:border-white transition-colors ${
-              pathname === '/post' ? 'bg-acid-yellow text-black' : 'dark:text-white hover:bg-black/10 dark:hover:bg-white/10'
-            }`}
-          >
-            <span className="text-xl mb-1"><PlusCircle /></span>
-            <span className="font-brutal text-[10px] leading-none uppercase">POST</span>
+            <LogIn className="w-3.5 h-3.5" /> LOG IN
           </Link>
         )}
+      </header>
 
-        {user && (
-          <Link
-            href="/profile"
-            className={`flex flex-col items-center justify-center flex-1 py-3 border-r-[3px] border-black dark:border-white transition-colors ${
-              pathname === '/profile' ? 'bg-acid-yellow text-black' : 'dark:text-white hover:bg-black/10 dark:hover:bg-white/10'
-            }`}
-          >
-            <span className="text-xl mb-1"><User /></span>
-            <span className="font-brutal text-[10px] leading-none uppercase">ME</span>
-          </Link>
-        )}
+      {/* ===== MOBILE BOTTOM TAB BAR ===== */}
+      <nav
+        className="md:hidden fixed bottom-0 left-0 right-0 z-[100] flex items-stretch bg-acid-yellow border-t-[3px] border-black"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+      >
+        {/* Wall */}
+        <Link
+          href="/"
+          className={`flex flex-col items-center justify-center flex-1 py-2 gap-0.5 border-r-[3px] border-black transition-colors ${
+            isActive('/') ? 'bg-black text-acid-yellow' : 'hover:bg-black/10'
+          }`}
+        >
+          <LayoutGrid className="w-5 h-5" />
+          <span className="font-brutal text-[9px] leading-none uppercase">Wall</span>
+        </Link>
 
+        {/* Crew */}
+        <Link
+          href="/friends"
+          className={`flex flex-col items-center justify-center flex-1 py-2 gap-0.5 border-r-[3px] border-black transition-colors ${
+            isActive('/friends') ? 'bg-black text-acid-yellow' : 'hover:bg-black/10'
+          }`}
+        >
+          <Users className="w-5 h-5" />
+          <span className="font-brutal text-[9px] leading-none uppercase">Crew</span>
+        </Link>
+
+        {/* Profile (logged in) or Login */}
         {user ? (
-          <button
-            onClick={handleLogout}
-            className="flex flex-col items-center justify-center flex-1 py-3 border-black dark:border-white transition-colors dark:text-white hover:bg-black/10 dark:hover:bg-white/10"
-          >
-            <span className="text-xl mb-1"><LogOut /></span>
-            <span className="font-brutal text-[10px] leading-none uppercase">OUT</span>
-          </button>
+          <>
+            <Link
+              href="/profile"
+              className={`flex flex-col items-center justify-center flex-1 py-2 gap-0.5 border-r-[3px] border-black transition-colors ${
+                isActive('/profile') ? 'bg-black text-acid-yellow' : 'hover:bg-black/10'
+              }`}
+            >
+              <User className="w-5 h-5" />
+              <span className="font-brutal text-[9px] leading-none uppercase">Me</span>
+            </Link>
+            <button
+              onClick={handleLogout}
+              className="flex flex-col items-center justify-center flex-1 py-2 gap-0.5 hover:bg-black/10 transition-colors"
+            >
+              <LogOut className="w-5 h-5" />
+              <span className="font-brutal text-[9px] leading-none uppercase">Out</span>
+            </button>
+          </>
         ) : (
           <Link
             href="/login"
-            className="flex flex-col items-center justify-center flex-1 py-3 border-black dark:border-white transition-colors dark:text-white hover:bg-black/10 dark:hover:bg-white/10"
+            className={`flex flex-col items-center justify-center flex-1 py-2 gap-0.5 transition-colors ${
+              isActive('/login') ? 'bg-black text-acid-yellow' : 'hover:bg-black/10'
+            }`}
           >
-            <span className="text-xl mb-1"><LogIn /></span>
-            <span className="font-brutal text-[10px] leading-none uppercase">IN</span>
+            <LogIn className="w-5 h-5" />
+            <span className="font-brutal text-[9px] leading-none uppercase">Login</span>
           </Link>
         )}
       </nav>
-      
-      {/* Spacer for bottom tab bar on mobile */}
-      <div className="h-16 md:hidden" />
     </>
   );
 }

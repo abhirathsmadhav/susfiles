@@ -11,6 +11,16 @@ import { useRouter } from 'next/navigation';
 import Nav from '@/components/Nav';
 import { useAuth } from '@/lib/auth-context';
 
+const TYPE_ICONS: Record<CardType, string> = {
+  image: '🖼️',
+  quote: '💬',
+  video: '🎥',
+  audio: '🎵',
+  convo: '🗣️',
+  moment: '⚡',
+  text: '📝',
+};
+
 export default function PostPage() {
   const router = useRouter();
   const { user } = useAuth();
@@ -18,7 +28,6 @@ export default function PostPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  // Form State
   const [type, setType] = useState<CardType>('image');
   const [content, setContent] = useState('');
   const [title, setTitle] = useState('');
@@ -33,12 +42,12 @@ export default function PostPage() {
       try {
         const [friendsSnap, usersSnap] = await Promise.all([
           getDocs(collection(db, 'friends')),
-          getDocs(collection(db, 'users'))
+          getDocs(collection(db, 'users')),
         ]);
-        
+
         const mappedUsers: Friend[] = usersSnap.docs
-          .filter(d => d.data().username) // Only show users who have set up a username
-          .map(d => {
+          .filter((d) => d.data().username)
+          .map((d) => {
             const data = d.data();
             return {
               id: data.uid,
@@ -50,10 +59,11 @@ export default function PostPage() {
               createdAt: data.createdAt,
             };
           });
-        
-        const mappedFriends: Friend[] = friendsSnap.docs.map(d => ({ id: d.id, ...d.data() } as Friend));
-        
-        // Merge and deduplicate just in case
+
+        const mappedFriends: Friend[] = friendsSnap.docs.map(
+          (d) => ({ id: d.id, ...d.data() } as Friend)
+        );
+
         setFriends([...mappedUsers, ...mappedFriends]);
       } finally {
         setLoading(false);
@@ -85,7 +95,7 @@ export default function PostPage() {
         position: {
           x: Math.floor(Math.random() * (typeof window !== 'undefined' ? window.innerWidth - 300 : 800)),
           y: Math.floor(Math.random() * (typeof window !== 'undefined' ? window.innerHeight - 300 : 800)),
-          rotation: Math.floor(Math.random() * 30) - 15, // -15 to +15
+          rotation: Math.floor(Math.random() * 30) - 15,
         },
       };
 
@@ -101,35 +111,42 @@ export default function PostPage() {
       toast.success('FILE ADDED TO THE WALL 🔥');
       router.push('/');
     } catch (err) {
-      console.error("POST FILE ERROR:", err);
+      console.error('POST FILE ERROR:', err);
       toast.error('Failed to post file.');
     } finally {
       setSaving(false);
     }
   };
 
-  const types: CardType[] = ['quote', 'image', 'video', 'audio', 'convo', 'moment', 'text'];
+  const types: CardType[] = ['image', 'quote', 'video', 'audio', 'convo', 'moment', 'text'];
 
   return (
     <AuthGuard>
-      <div className="min-h-screen bg-off-white dark:bg-brutal-black transition-colors duration-300 flex flex-col pb-24 md:pb-0">
+      <div
+        className="min-h-screen bg-off-white flex flex-col"
+        style={{ paddingBottom: 'calc(64px + env(safe-area-inset-bottom, 0px))' }}
+      >
         <Nav />
-        <main className="flex-1 max-w-3xl w-full mx-auto p-4 md:p-8 mt-16 md:mt-24">
-          <h1 className="font-brutal text-4xl mb-6 dark:text-acid-yellow">➕ ADD FILE</h1>
+        <main className="flex-1 max-w-2xl w-full mx-auto px-4 py-5 md:py-8">
+          <h1 className="font-brutal text-3xl md:text-4xl mb-5">➕ ADD FILE</h1>
 
-          <form onSubmit={handleSubmit} className="panel-brutal flex flex-col gap-6">
-            
-            {/* Type Selection */}
+          <form onSubmit={handleSubmit} className="panel-brutal flex flex-col gap-5">
+
+            {/* Type Selection — horizontal scroll */}
             <div>
-              <label className="block font-brutal text-sm mb-2 dark:text-white">FILE TYPE</label>
-              <div className="flex flex-wrap gap-2">
+              <label className="block font-brutal text-xs mb-2 uppercase tracking-wider">FILE TYPE</label>
+              <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 no-scrollbar">
                 {types.map((t) => (
                   <button
                     key={t}
                     type="button"
-                    onClick={() => setType(t)}
-                    className={`btn-brutal-sm ${type === t ? 'bg-black text-acid-yellow dark:bg-white dark:text-black' : 'dark:text-white'}`}
+                    onClick={() => { setType(t); setMediaUrl(''); }}
+                    className={`flex-shrink-0 flex flex-col items-center gap-1 px-3 py-2 border-[2px] border-black font-brutal text-xs uppercase transition-all ${
+                      type === t ? 'bg-black text-acid-yellow' : 'bg-white hover:bg-black/5'
+                    }`}
+                    style={{ boxShadow: type === t ? '3px 3px 0px #F5F500' : '2px 2px 0px #000', minWidth: 56 }}
                   >
+                    <span className="text-base">{TYPE_ICONS[t]}</span>
                     {t.toUpperCase()}
                   </button>
                 ))}
@@ -139,44 +156,47 @@ export default function PostPage() {
             {/* Media Upload */}
             {['image', 'audio', 'video'].includes(type) && (
               <div>
-                <label className="block font-brutal text-sm mb-2 dark:text-white">MEDIA UPLOAD</label>
-                <UploadZone 
-                  onUpload={(url) => setMediaUrl(url)} 
-                  currentUrl={mediaUrl} 
-                  acceptAudio={['audio', 'video'].includes(type)} 
+                <label className="block font-brutal text-xs mb-2 uppercase tracking-wider">MEDIA</label>
+                <UploadZone
+                  onUpload={(url) => setMediaUrl(url)}
+                  currentUrl={mediaUrl}
+                  acceptAudio={['audio', 'video'].includes(type)}
                 />
               </div>
             )}
 
-            {/* Content fields */}
+            {/* Content */}
             <div>
-              <label className="block font-brutal text-sm mb-2 dark:text-white">MAIN CONTENT / QUOTE</label>
+              <label className="block font-brutal text-xs mb-2 uppercase tracking-wider">
+                {type === 'quote' ? 'THE QUOTE' : 'CONTENT / DESCRIPTION'}
+              </label>
               <textarea
                 value={content}
-                onChange={e => setContent(e.target.value)}
-                className="input-brutal min-h-[100px]"
-                placeholder="What did they say or do?"
+                onChange={(e) => setContent(e.target.value)}
+                className="input-brutal min-h-[90px] resize-none"
+                placeholder={type === 'quote' ? '"What did they actually say?"' : 'What happened?'}
               />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Title + Caption */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block font-brutal text-sm mb-2 dark:text-white">TITLE (Optional)</label>
+                <label className="block font-brutal text-xs mb-2 uppercase tracking-wider">TITLE (Optional)</label>
                 <input
                   type="text"
                   value={title}
-                  onChange={e => setTitle(e.target.value)}
+                  onChange={(e) => setTitle(e.target.value)}
                   className="input-brutal"
                   placeholder="e.g. The Incident"
                 />
               </div>
               {['image', 'video'].includes(type) && (
                 <div>
-                  <label className="block font-brutal text-sm mb-2 dark:text-white">CAPTION (Optional)</label>
+                  <label className="block font-brutal text-xs mb-2 uppercase tracking-wider">CAPTION (Optional)</label>
                   <input
                     type="text"
                     value={caption}
-                    onChange={e => setCaption(e.target.value)}
+                    onChange={(e) => setCaption(e.target.value)}
                     className="input-brutal"
                     placeholder="Context?"
                   />
@@ -186,51 +206,69 @@ export default function PostPage() {
 
             {/* Tag Suspects */}
             <div>
-              <label className="block font-brutal text-sm mb-2 dark:text-white">TAG SUSPECTS</label>
-              <input 
-                type="text" 
-                placeholder="Search by name or @username..." 
-                className="input-brutal w-full mb-3"
+              <label className="block font-brutal text-xs mb-2 uppercase tracking-wider">TAG SUSPECTS *</label>
+              <input
+                type="text"
+                placeholder="🔍 Search suspects..."
+                className="input-brutal mb-2"
                 value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
+                onChange={(e) => setSearchQuery(e.target.value)}
               />
-              {loading ? <p>Loading suspects...</p> : (
-                <div className="flex flex-wrap gap-2 max-h-60 overflow-y-auto p-2 border-[3px] border-black bg-white/5">
+              {loading ? (
+                <p className="font-mono text-sm opacity-60">Loading suspects...</p>
+              ) : (
+                <div className="flex flex-wrap gap-2 max-h-44 overflow-y-auto p-2 border-[3px] border-black bg-[#FAFAF5]">
                   {friends
-                    .filter(f => 
-                      selectedFriends.includes(f.id) || 
-                      f.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                      f.nickname?.toLowerCase().includes(searchQuery.toLowerCase())
+                    .filter(
+                      (f) =>
+                        selectedFriends.includes(f.id) ||
+                        f.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                        f.nickname?.toLowerCase().includes(searchQuery.toLowerCase())
                     )
-                    .map(f => {
-                    const isSelected = selectedFriends.includes(f.id);
-                    return (
-                      <button
-                        key={f.id}
-                        type="button"
-                        onClick={() => setSelectedFriends(prev => isSelected ? prev.filter(id => id !== f.id) : [...prev, f.id])}
-                        className={`px-3 py-1 font-bold text-xs border-[2px] border-black transition-transform hover:-translate-y-1 ${isSelected ? 'shadow-brutal-sm' : ''}`}
-                        style={{
-                          backgroundColor: isSelected ? f.signatureColor : 'transparent',
-                          color: isSelected ? '#000' : 'inherit',
-                          borderColor: isSelected ? '#000' : 'gray'
-                        }}
-                      >
-                        {f.nickname || f.name}
-                      </button>
-                    );
-                  })}
-                  {friends.length === 0 && <p className="text-sm opacity-50">No suspects found.</p>}
+                    .map((f) => {
+                      const isSelected = selectedFriends.includes(f.id);
+                      return (
+                        <button
+                          key={f.id}
+                          type="button"
+                          onClick={() =>
+                            setSelectedFriends((prev) =>
+                              isSelected ? prev.filter((id) => id !== f.id) : [...prev, f.id]
+                            )
+                          }
+                          className="flex items-center gap-1.5 px-3 py-2 font-bold text-xs border-[2px] border-black transition-all active:scale-95"
+                          style={{
+                            backgroundColor: isSelected ? f.signatureColor : 'white',
+                            boxShadow: isSelected ? '2px 2px 0px #000' : 'none',
+                          }}
+                        >
+                          {f.avatarUrl && (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={f.avatarUrl} alt="" className="w-4 h-4 rounded-full border border-black object-cover" />
+                          )}
+                          {f.nickname || f.name}
+                          {isSelected && <span className="ml-0.5">✓</span>}
+                        </button>
+                      );
+                    })}
+                  {friends.length === 0 && (
+                    <p className="text-sm opacity-50 font-mono">No suspects found.</p>
+                  )}
                 </div>
+              )}
+              {selectedFriends.length > 0 && (
+                <p className="font-mono text-xs mt-1.5 opacity-60">
+                  {selectedFriends.length} selected
+                </p>
               )}
             </div>
 
             <button
               type="submit"
               disabled={saving || loading}
-              className="btn-brutal bg-acid-yellow w-full text-xl py-4 mt-4"
+              className="btn-brutal bg-acid-yellow w-full text-base py-4 mt-1"
             >
-              {saving ? 'UPLOADING...' : 'POST FILE TO THE WALL'}
+              {saving ? '⬆️ UPLOADING...' : '📌 POST TO THE WALL'}
             </button>
           </form>
         </main>
