@@ -8,6 +8,11 @@ export const metadata: Metadata = {
   title: 'The Sus Files',
   description: "A curated archive of your friends' most unhinged moments, quotes, and chaos.",
   keywords: ['sus files', 'memes', 'friends', 'quotes', 'roast'],
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'Sus Files',
+  },
 };
 
 export const viewport: Viewport = {
@@ -16,6 +21,7 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   viewportFit: 'cover',
+  themeColor: '#FAFAF5',
 };
 
 export default function RootLayout({
