@@ -210,13 +210,13 @@ export default function HomePage() {
       </div>
 
       {/* Wall */}
-      <main className="max-w-7xl mx-auto px-3 md:px-4 py-4 md:py-8">
+      <main className="w-full flex-1 flex flex-col">
         {dataLoading ? (
-          <div className="panel-brutal text-center py-16">
+          <div className="max-w-7xl w-full mx-auto px-3 md:px-4 py-16 panel-brutal text-center mt-8">
             <p className="font-brutal text-xl animate-pulse">📂 LOADING THE FILES...</p>
           </div>
         ) : cards.length === 0 && friends.length === 0 ? (
-          <div className="panel-brutal text-center py-16">
+          <div className="max-w-7xl w-full mx-auto px-3 md:px-4 py-16 panel-brutal text-center mt-8">
             <p className="font-brutal text-2xl mb-2">📁 NO FILES YET</p>
             <p className="font-mono text-sm opacity-60">The admin needs to add some sus content first.</p>
           </div>
