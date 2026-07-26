@@ -8,7 +8,7 @@ import { Eye, EyeOff, FolderSearch, Ghost, Lock, UserPlus, Loader2 } from 'lucid
 import toast from 'react-hot-toast';
 
 export default function LoginPage() {
-  const { login, signup, loginAsGuest, loginWithGoogle } = useAuth();
+  const { login, signup, loginAsGuest, loginWithGoogle, resetPassword } = useAuth();
   const router = useRouter();
   const [isSignup, setIsSignup] = useState(false);
   const [form, setForm] = useState({ email: '', password: '', displayName: '' });
@@ -67,6 +67,23 @@ export default function LoginPage() {
     }
   };
 
+  const handleResetPassword = async () => {
+    if (!form.email) {
+      toast.error('Please enter your email address first. 📧');
+      return;
+    }
+    setLoading(true);
+    try {
+      await resetPassword(form.email);
+      toast.success('Password reset email sent! Check your inbox. 📬');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to send reset email';
+      toast.error(msg.replace('Firebase: ', '').replace(/\(auth\/.*\)/, '').trim());
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-off-white flex flex-col" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
       {/* Header */}
@@ -121,7 +138,18 @@ export default function LoginPage() {
               </div>
 
               <div>
-                <label className="font-brutal text-xs uppercase tracking-wider block mb-1">Password</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="font-brutal text-xs uppercase tracking-wider block">Password</label>
+                  {!isSignup && (
+                    <button
+                      type="button"
+                      onClick={handleResetPassword}
+                      className="font-brutal text-[10px] uppercase text-black/50 hover:text-hot-pink transition-colors underline"
+                    >
+                      Forgot password?
+                    </button>
+                  )}
+                </div>
                 <div className="relative">
                   <input
                     type={showPassword ? 'text' : 'password'}

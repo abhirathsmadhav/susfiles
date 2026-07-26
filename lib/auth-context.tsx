@@ -15,6 +15,7 @@ import {
   signOut,
   GoogleAuthProvider,
   signInWithPopup,
+  sendPasswordResetEmail,
   User,
 } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
@@ -30,6 +31,7 @@ interface AuthContextValue {
   signup: (email: string, password: string, displayName: string) => Promise<void>;
   loginAsGuest: () => Promise<void>;
   loginWithGoogle: () => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -105,6 +107,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     document.cookie = 'sus-session=1; path=/; max-age=86400';
   };
 
+  const resetPassword = async (email: string) => {
+    await sendPasswordResetEmail(auth, email);
+  };
+
   const logout = async () => {
     await signOut(auth);
     setProfile(null);
@@ -122,6 +128,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signup,
         loginAsGuest,
         loginWithGoogle,
+        resetPassword,
         logout,
       }}
     >
