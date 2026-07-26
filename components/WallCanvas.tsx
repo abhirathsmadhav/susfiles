@@ -31,13 +31,10 @@ function randomPosition(seed: number, index: number, total: number) {
 // Layout for scatter mode
 function getScatterLayout(cards: CardType[], shuffleSeed: number) {
   return cards.map((card, i) => {
+    // Always use seed-based rotation so each card has a unique tilt,
+    // regardless of the stored position.rotation (which can be the same for all cards).
     const { rotation } = randomPosition(shuffleSeed, i, cards.length);
-    // Overriding individual stored rotations in masonry/scatter to enforce dynamic random tilt
-    // but capping at -15 to +15 so it's not upside down.
-    let rot = card.position.rotation !== undefined ? card.position.rotation : rotation;
-    if (rot > 20) rot = 20;
-    if (rot < -20) rot = -20;
-    return { card, rotation: rot };
+    return { card, rotation };
   });
 }
 
