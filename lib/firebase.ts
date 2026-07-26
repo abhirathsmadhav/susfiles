@@ -14,21 +14,25 @@ const firebaseConfig = {
 // Firebase Web SDK is client-only — do not initialize on the server.
 // All Firebase usage is inside useEffect / event handlers, so null values
 // on the server are never actually accessed.
+import { getStorage, type FirebaseStorage } from 'firebase/storage';
+
 let _app: FirebaseApp | null = null;
 let _auth: Auth | null = null;
 let _db: Firestore | null = null;
+let _storage: FirebaseStorage | null = null;
 
 if (typeof window !== 'undefined') {
   try {
     _app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
     _auth = getAuth(_app);
     _db = getFirestore(_app);
+    _storage = getStorage(_app);
   } catch (e) {
-    console.error('[Firebase] Initialization failed — check your NEXT_PUBLIC_FIREBASE_* env vars:', e);
+    console.error('[Firebase] Initialization failed:', e);
   }
 }
 
-// Cast to non-null: these are always defined in the browser where they're used
 export const auth = _auth as Auth;
 export const db = _db as Firestore;
+export const storage = _storage as FirebaseStorage;
 export default _app;

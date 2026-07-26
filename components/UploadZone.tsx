@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useCallback, useRef } from 'react';
-import { uploadImage } from '@/lib/imgbb';
 import toast from 'react-hot-toast';
 import ImageCropper from './ImageCropper';
+import { uploadImage } from '@/lib/imgbb';
 
 interface UploadZoneProps {
   onUpload: (url: string) => void;
@@ -17,7 +17,7 @@ export default function UploadZone({ onUpload, currentUrl, acceptAudio = true }:
   const [preview, setPreview] = useState<string>(currentUrl ?? '');
   const [fileType, setFileType] = useState<'image' | 'audio' | 'video'>(
     currentUrl?.match(/\.(mp4|webm|mov)$/i) ? 'video' :
-    currentUrl?.match(/\.(mp3|wav|ogg)$/i) || currentUrl?.includes('catbox') ? 'audio' : 'image'
+    currentUrl?.match(/\.(mp3|wav|ogg)$/i) || currentUrl?.includes('catbox') || currentUrl?.includes('alt=media') && currentUrl?.includes('audio') ? 'audio' : 'image'
   );
   const [progress, setProgress] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -31,19 +31,27 @@ export default function UploadZone({ onUpload, currentUrl, acceptAudio = true }:
 
     try {
       const progressInterval = setInterval(() => setProgress((p) => Math.min(p + 10, 85)), 200);
-
       let finalUrl = '';
+
       if (type === 'image') {
         const fileObj = fileToUpload instanceof File ? fileToUpload : new File([fileToUpload], 'cropped.jpg', { type: 'image/jpeg' });
         const { url } = await uploadImage(fileObj);
         finalUrl = url;
       } else {
+        const fileObj = fileToUpload instanceof File ? fileToUpload : new File([fileToUpload], `file.${type === 'video' ? 'mp4' : 'mp3'}`, { type: fileToUpload.type || 'application/octet-stream' });
         const fd = new FormData();
-        fd.append('file', fileToUpload);
-        const res = await fetch('/api/upload-media', { method: 'POST', body: fd });
+        fd.append('file', fileObj);
+        
+        // Upload directly to kappa.lol bypassing Vercel limits
+        const res = await fetch('https://kappa.lol/api/upload', { 
+          method: 'POST', 
+          body: fd,
+          // kappa.lol supports CORS
+        });
+        
         if (!res.ok) throw new Error('Media upload failed');
         const data = await res.json();
-        finalUrl = data.url;
+        finalUrl = data.link;
       }
 
       clearInterval(progressInterval);
@@ -52,6 +60,7 @@ export default function UploadZone({ onUpload, currentUrl, acceptAudio = true }:
       onUpload(finalUrl);
       toast.success(`${type === 'video' ? 'Video' : type === 'audio' ? 'Audio' : 'Image'} uploaded! 🔥`);
     } catch (err) {
+      console.error(err);
       toast.error('Upload failed. Try again.');
       setPreview('');
       setProgress(0);
@@ -98,10 +107,8 @@ export default function UploadZone({ onUpload, currentUrl, acceptAudio = true }:
 
       await performUpload(file, isVideo ? 'video' : 'audio');
     },
-    [acceptAudio, onUpload]
+    [acceptAudio]
   );
-
-
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();

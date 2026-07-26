@@ -3,16 +3,18 @@ import { NextResponse } from 'next/server';
 export async function POST(request: Request) {
   try {
     const formData = await request.formData();
-    const file = formData.get('file');
+    const file = formData.get('file') as File;
 
-    if (!file || !(file instanceof Blob)) {
+    if (!file || typeof file === 'string') {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
     }
+
+    console.log("File received:", file.name, file.size, file.type);
 
     // Prepare FormData for catbox.moe
     const catboxForm = new FormData();
     catboxForm.append('reqtype', 'fileupload');
-    catboxForm.append('fileToUpload', file);
+    catboxForm.append('fileToUpload', file, file.name || 'upload.mp4');
 
     const res = await fetch('https://catbox.moe/user/api.php', {
       method: 'POST',
@@ -20,7 +22,7 @@ export async function POST(request: Request) {
     });
 
     if (!res.ok) {
-      throw new Error(`Catbox API error: ${res.statusText}`);
+      throw new Error(`Catbox API error: ${res.status} ${res.statusText}`);
     }
 
     // Catbox returns the direct URL as plain text

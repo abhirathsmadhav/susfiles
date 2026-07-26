@@ -26,7 +26,7 @@ export default function FriendsPage() {
           .map((d) => {
             const data = d.data();
             return {
-              id: data.uid,
+              id: d.id,
               name: data.displayName || 'Unknown',
               nickname: data.callSign || `@${data.username}`,
               avatarUrl: data.avatarUrl,

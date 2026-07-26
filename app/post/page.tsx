@@ -46,11 +46,11 @@ export default function PostPage() {
         ]);
 
         const mappedUsers: Friend[] = usersSnap.docs
-          .filter((d) => d.data().username && (profile?.friendIds?.includes(d.data().uid) || d.data().uid === user?.uid))
+          .filter((d) => d.data().username && (profile?.friendIds?.includes(d.id) || d.id === user?.uid))
           .map((d) => {
             const data = d.data();
             return {
-              id: data.uid,
+              id: d.id,
               name: data.displayName || 'Unknown',
               nickname: data.callSign || `@${data.username}`,
               avatarUrl: data.avatarUrl,
