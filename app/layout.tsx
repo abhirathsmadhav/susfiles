@@ -8,10 +8,23 @@ export const metadata: Metadata = {
   title: 'The Sus Files',
   description: "A curated archive of your friends' most unhinged moments, quotes, and chaos.",
   keywords: ['sus files', 'memes', 'friends', 'quotes', 'roast'],
+  verification: {
+    google: '2KdXfgou2TOSCm1Fgrl-fZakMX7TsSmhoYu-nKZusfI',
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
     title: 'Sus Files',
+  },
+  icons: {
+    icon: [
+      { url: '/favicon.ico' },
+      { url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
+      { url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
+    ],
+    apple: [
+      { url: '/apple-touch-icon.png' }
+    ]
   },
 };
 
