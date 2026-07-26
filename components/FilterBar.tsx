@@ -2,6 +2,7 @@
 
 import { Friend, CardType } from '@/types';
 import { useState } from 'react';
+import { getContrastColor } from './FriendNode';
 
 interface FilterBarProps {
   friends: Friend[];
@@ -73,7 +74,10 @@ export default function FilterBar({
               className={`tag-brutal text-[11px] cursor-pointer flex-shrink-0 transition-all hover:-translate-y-0.5 ${
                 selectedFriend === f.id ? 'ring-2 ring-black' : ''
               }`}
-              style={{ background: f.signatureColor }}
+              style={{ 
+                background: f.signatureColor,
+                color: getContrastColor(f.signatureColor || '#F5F500')
+              }}
             >
               {f.nickname || f.name}
             </button>

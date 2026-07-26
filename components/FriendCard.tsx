@@ -2,6 +2,7 @@
 
 import { Friend } from '@/types';
 import Link from 'next/link';
+import { getContrastColor } from './FriendNode';
 
 interface FriendCardProps {
   friend: Friend;
@@ -34,7 +35,10 @@ export default function FriendCard({ friend }: FriendCardProps) {
             ) : (
               <div
                 className="w-full h-full flex items-center justify-center font-brutal text-2xl sm:text-3xl"
-                style={{ background: friend.signatureColor }}
+                style={{ 
+                  background: friend.signatureColor,
+                  color: getContrastColor(friend.signatureColor || '#F5F500')
+                }}
               >
                 {friend.name.charAt(0).toUpperCase()}
               </div>
@@ -63,7 +67,10 @@ export default function FriendCard({ friend }: FriendCardProps) {
         {/* Footer */}
         <div
           className="flex items-center justify-center py-2 border-t-[2px] border-black font-brutal text-xs uppercase tracking-wider"
-          style={{ background: friend.signatureColor }}
+          style={{ 
+            background: friend.signatureColor,
+            color: getContrastColor(friend.signatureColor || '#F5F500')
+          }}
         >
           VIEW FILE →
         </div>

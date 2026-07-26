@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { motion, PanInfo } from 'framer-motion';
 import { useRef, useState } from 'react';
 import CassettePlayer from './CassettePlayer';
+import { getContrastColor } from './FriendNode';
 
 interface CardProps {
   card: CardType;
@@ -170,7 +171,10 @@ export default function Card({ card, friends, onClick, isFeatured, style, classN
               <span
                 key={f.id}
                 className="text-[10px] font-bold px-1.5 py-0.5 border-[2px] border-black max-w-[80px] truncate"
-                style={{ background: f.signatureColor }}
+                style={{ 
+                  background: f.signatureColor,
+                  color: getContrastColor(f.signatureColor || '#F5F500')
+                }}
               >
                 {f.nickname || f.name}
               </span>

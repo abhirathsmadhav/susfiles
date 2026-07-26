@@ -4,6 +4,7 @@ import { Card, Friend } from '@/types';
 import { useEffect, useRef } from 'react';
 import EmojiReactions from './EmojiReactions';
 import Link from 'next/link';
+import { getContrastColor } from './FriendNode';
 
 interface CardModalProps {
   card: Card;
@@ -141,7 +142,10 @@ export default function CardModal({ card, friends, onClose }: CardModalProps) {
                     key={f.id}
                     href={`/friends/${f.id}`}
                     className="flex items-center gap-1.5 px-3 py-2 border-[2px] border-black font-bold text-sm hover:opacity-80 transition-opacity active:scale-95"
-                    style={{ background: f.signatureColor }}
+                    style={{ 
+                      background: f.signatureColor,
+                      color: getContrastColor(f.signatureColor || '#F5F500')
+                    }}
                     onClick={onClose}
                   >
                     {f.avatarUrl && (
