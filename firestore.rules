@@ -50,6 +50,13 @@ service cloud.firestore {
     }
 
     // ========================
+    // Space Invitations collection
+    // ========================
+    match /spaceInvitations/{invitationId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // ========================
     // Usernames collection (Unique enforcement)
     // ========================
     match /usernames/{username} {

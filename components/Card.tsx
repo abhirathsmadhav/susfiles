@@ -40,6 +40,19 @@ export default function Card({ card, friends, onClick, isFeatured, style, classN
   const accent = getAccentColor(card, friends);
   const linkedFriends = friends.filter((f) => card.linkedFriendIds.includes(f.id));
   const isAbsolute = style?.position === 'absolute';
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  const handleMouseEnter = () => {
+    if (videoRef.current) {
+      videoRef.current.play().catch(() => {});
+    }
+  };
+
+  const handleMouseLeave = () => {
+    if (videoRef.current) {
+      videoRef.current.pause();
+    }
+  };
 
   const handleDragEnd = (e: any, info: PanInfo) => {
     if (!isDraggable || !onDragEnd) return;
@@ -54,6 +67,8 @@ export default function Card({ card, friends, onClick, isFeatured, style, classN
       dragMomentum={false}
       onDragEnd={handleDragEnd}
       onClick={onClick}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
       className={`relative select-none tape-corner ${isFeatured ? 'pushpin' : ''} ${className ?? ''} ${isDraggable ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'} ${isAbsolute ? '' : 'w-full'}`}
       style={{
         '--card-rotation': `${card.position.rotation ?? 0}deg`,
@@ -108,19 +123,27 @@ export default function Card({ card, friends, onClick, isFeatured, style, classN
         )}
 
         {card.type === 'video' && card.videoUrl && (
-          <div className="w-full border-b-[2px] border-black bg-black">
+          <div className="w-full border-b-[2px] border-black bg-black relative">
             <video 
-              src={card.videoUrl} 
-              controls 
+              ref={videoRef}
+              src={card.videoUrl}
+              loop
+              muted
+              playsInline
               className={`w-full object-cover ${
                 !card.mediaAspectRatio || card.mediaAspectRatio === '1:1' ? 'aspect-square' :
                 card.mediaAspectRatio === 'original' ? '' :
                 card.mediaAspectRatio === '4:3' ? 'aspect-[4/3]' :
                 card.mediaAspectRatio === '16:9' ? 'aspect-video' :
                 card.mediaAspectRatio === '9:16' ? 'aspect-[9/16]' : 'aspect-square'
-              }`} 
-              onClick={(e) => e.stopPropagation()} 
+              }`}
             />
+            {/* Play overlay icon for affordance */}
+            <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity pointer-events-none">
+              <div className="bg-white/80 rounded-full p-2 border-2 border-black" style={{ boxShadow: '2px 2px 0px #000' }}>
+                ▶️
+              </div>
+            </div>
           </div>
         )}
 

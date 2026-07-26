@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, use } from 'react';
-import { doc, getDoc, collection, query, where, getDocs, updateDoc, arrayUnion, arrayRemove, deleteDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs, updateDoc, arrayUnion, arrayRemove, deleteDoc, addDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Card, Friend, Space } from '@/types';
 import Nav from '@/components/Nav';
@@ -108,15 +108,32 @@ export default function PrivateSpacePage({ params }: { params: Promise<{ id: str
     if (!friendToAdd || !space || space.adminId !== user?.uid) return;
     
     try {
-      await updateDoc(doc(db, 'spaces', space.id), {
-        memberIds: arrayUnion(friendToAdd)
+      // Check if invitation already exists
+      const q = query(
+        collection(db, 'spaceInvitations'), 
+        where('spaceId', '==', space.id), 
+        where('toUid', '==', friendToAdd), 
+        where('status', '==', 'pending')
+      );
+      const snap = await getDocs(q);
+      if (!snap.empty) {
+        toast.error('Invitation already sent to this suspect.');
+        return;
+      }
+
+      await addDoc(collection(db, 'spaceInvitations'), {
+        spaceId: space.id,
+        spaceName: space.name,
+        fromUid: user?.uid,
+        toUid: friendToAdd,
+        status: 'pending',
+        createdAt: new Date().toISOString()
       });
-      setSpace({ ...space, memberIds: [...space.memberIds, friendToAdd] });
       setFriendToAdd('');
-      toast.success('Member added!');
+      toast.success('Invitation sent!');
     } catch (err) {
       console.error(err);
-      toast.error('Failed to add member');
+      toast.error('Failed to send invitation');
     }
   };
 

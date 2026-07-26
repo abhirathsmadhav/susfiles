@@ -76,3 +76,13 @@ export interface Space {
 export type FriendInput = Omit<Friend, 'id' | 'createdAt'>;
 export type CardInput = Omit<Card, 'id' | 'createdAt' | 'createdBy' | 'reactions'>;
 export type SpaceInput = Omit<Space, 'id' | 'createdAt'>;
+
+export interface SpaceInvitation {
+  id: string;
+  spaceId: string;
+  spaceName: string;
+  fromUid: string;
+  toUid: string;
+  status: 'pending' | 'accepted' | 'declined';
+  createdAt: string;
+}

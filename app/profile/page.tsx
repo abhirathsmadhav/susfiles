@@ -20,6 +20,8 @@ export default function ProfilePage() {
   // UI State
   const [isEditing, setIsEditing] = useState(false);
   const [requests, setRequests] = useState<any[]>([]);
+  const [spaceInvitations, setSpaceInvitations] = useState<any[]>([]);
+  const [postToDelete, setPostToDelete] = useState<string | null>(null);
 
   // Form State
   const [username, setUsername] = useState(profile?.username || '');
@@ -75,6 +77,17 @@ export default function ProfilePage() {
       setRequests(populated);
     });
     return unsub;
+    return unsub;
+  }, [user]);
+
+  // Load Space Invitations
+  useEffect(() => {
+    if (!user) return;
+    const q = query(collection(db, 'spaceInvitations'), where('toUid', '==', user.uid), where('status', '==', 'pending'));
+    const unsub = onSnapshot(q, (snap) => {
+      setSpaceInvitations(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
+    return unsub;
   }, [user]);
 
   const handleAcceptRequest = async (req: any) => {
@@ -103,15 +116,44 @@ export default function ProfilePage() {
     }
   };
 
-  const handleDeletePost = async (cardId: string) => {
-    if (!window.confirm("Are you sure you want to delete this file? This cannot be undone.")) return;
+  const handleAcceptSpaceInvitation = async (invitation: any) => {
     try {
-      await deleteDoc(doc(db, 'cards', cardId));
-      setPosts((prev) => prev.filter((c) => c.id !== cardId));
+      await updateDoc(doc(db, 'spaces', invitation.spaceId), {
+        memberIds: arrayUnion(user!.uid)
+      });
+      await updateDoc(doc(db, 'spaceInvitations', invitation.id), {
+        status: 'accepted'
+      });
+      toast.success(`Joined space: ${invitation.spaceName} 🔒`);
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to accept space invitation');
+    }
+  };
+
+  const handleDeclineSpaceInvitation = async (invitationId: string) => {
+    try {
+      await updateDoc(doc(db, 'spaceInvitations', invitationId), {
+        status: 'declined'
+      });
+      toast.success('Space invitation declined 🚫');
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to decline invitation');
+    }
+  };
+
+  const handleDeletePost = async () => {
+    if (!postToDelete) return;
+    try {
+      await deleteDoc(doc(db, 'cards', postToDelete));
+      setPosts((prev) => prev.filter((c) => c.id !== postToDelete));
       toast.success("File deleted successfully.");
     } catch (err) {
       console.error(err);
       toast.error("Failed to delete file.");
+    } finally {
+      setPostToDelete(null);
     }
   };
 
@@ -338,7 +380,7 @@ export default function ProfilePage() {
                     <p className="font-brutal text-sm opacity-60">NO PENDING REQUESTS</p>
                   </div>
                 ) : (
-                  <div className="flex flex-col gap-3">
+                  <div className="flex flex-col gap-3 mb-4">
                     {requests.map(req => (
                       <div key={req.id} className="panel-brutal bg-white p-3 flex items-center justify-between gap-3">
                         <div className="flex items-center gap-2">
@@ -362,6 +404,27 @@ export default function ProfilePage() {
                       </div>
                     ))}
                   </div>
+                )}
+                
+                {/* Space Invitations */}
+                {spaceInvitations.length > 0 && (
+                  <>
+                    <h3 className="font-brutal text-lg mt-6 mb-3 border-b-[2px] border-black pb-1">SPACE INVITES</h3>
+                    <div className="flex flex-col gap-3">
+                      {spaceInvitations.map(inv => (
+                        <div key={inv.id} className="panel-brutal bg-[#FAFAF5] p-3 flex flex-col gap-3">
+                          <div>
+                            <p className="font-bold text-sm leading-tight">🔒 {inv.spaceName}</p>
+                            <p className="font-mono text-[10px] opacity-60">Private Space Invitation</p>
+                          </div>
+                          <div className="flex gap-2">
+                            <button onClick={() => handleAcceptSpaceInvitation(inv)} className="btn-brutal-sm flex-1 bg-lime-green text-black">JOIN</button>
+                            <button onClick={() => handleDeclineSpaceInvitation(inv.id)} className="btn-brutal-sm flex-1 bg-white hover:bg-[#FF2D78] hover:text-white border-black">DECLINE</button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
                 )}
               </div>
             )}
@@ -401,7 +464,7 @@ export default function ProfilePage() {
                       {post.title || post.content || 'Untitled File'}
                     </p>
                     <button
-                      onClick={() => handleDeletePost(post.id)}
+                      onClick={() => setPostToDelete(post.id)}
                       className="btn-brutal-sm bg-[#FF2D78] text-white mt-2 self-start"
                     >
                       DELETE
@@ -413,6 +476,33 @@ export default function ProfilePage() {
           </div>
 
         </main>
+
+        {/* Custom Delete Confirmation Modal */}
+        {postToDelete && (
+          <div className="modal-overlay z-[210]">
+            <div className="panel-brutal bg-white w-full max-w-sm animate-slide-up text-center">
+              <h2 className="font-brutal text-2xl mb-4 text-[#FF2D78]">DELETE POST?</h2>
+              <p className="font-mono text-sm opacity-80 mb-6">
+                Are you sure you want to permanently delete this file? This cannot be undone.
+              </p>
+              <div className="flex gap-2">
+                <button 
+                  onClick={() => setPostToDelete(null)}
+                  className="btn-brutal flex-1 bg-white hover:bg-black hover:text-white"
+                >
+                  CANCEL
+                </button>
+                <button 
+                  onClick={handleDeletePost}
+                  className="btn-brutal flex-1 bg-[#FF2D78] text-white hover:bg-black hover:text-[#FF2D78]"
+                >
+                  YES, DELETE
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
       </div>
     </AuthGuard>
   );
