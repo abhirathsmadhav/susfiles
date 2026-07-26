@@ -2,7 +2,7 @@
 
 import AuthGuard from '@/components/AuthGuard';
 import { useState, useEffect } from 'react';
-import { collection, getDocs, addDoc } from 'firebase/firestore';
+import { collection, getDocs, addDoc, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Friend, CardType } from '@/types';
 import UploadZone from '@/components/UploadZone';
@@ -11,20 +11,23 @@ import { useRouter } from 'next/navigation';
 import Nav from '@/components/Nav';
 import { useAuth } from '@/lib/auth-context';
 
-const TYPE_ICONS: Record<CardType, string> = {
-  image: '🖼️',
-  quote: '💬',
-  video: '🎥',
-  audio: '🎵',
-  convo: '🗣️',
-  moment: '⚡',
-  text: '📝',
+import { Image as ImageIcon, MessageSquareQuote, Video, Music, MessageCircle, Zap, FileText, Plus } from 'lucide-react';
+
+const TYPE_ICONS: Record<CardType, React.ReactNode> = {
+  image: <ImageIcon className="w-5 h-5" />,
+  quote: <MessageSquareQuote className="w-5 h-5" />,
+  video: <Video className="w-5 h-5" />,
+  audio: <Music className="w-5 h-5" />,
+  convo: <MessageCircle className="w-5 h-5" />,
+  moment: <Zap className="w-5 h-5" />,
+  text: <FileText className="w-5 h-5" />,
 };
 
 export default function PostPage() {
   const router = useRouter();
   const { user, profile } = useAuth();
   const [friends, setFriends] = useState<Friend[]>([]);
+  const [spaces, setSpaces] = useState<any[]>([]); // Using any since we don't need full Space type here, just id and name
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -36,13 +39,16 @@ export default function PostPage() {
   const [selectedFriends, setSelectedFriends] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [color, setColor] = useState('');
+  const [spaceId, setSpaceId] = useState<string>('');
+  const [mediaAspectRatio, setMediaAspectRatio] = useState<'original' | '1:1' | '4:3' | '16:9' | '9:16'>('original');
 
   useEffect(() => {
     async function loadFriends() {
       try {
-        const [friendsSnap, usersSnap] = await Promise.all([
+        const [friendsSnap, usersSnap, spacesSnap] = await Promise.all([
           getDocs(collection(db, 'friends')),
           getDocs(collection(db, 'users')),
+          getDocs(query(collection(db, 'spaces'), where('memberIds', 'array-contains', user?.uid)))
         ]);
 
         const mappedUsers: Friend[] = usersSnap.docs
@@ -65,6 +71,7 @@ export default function PostPage() {
         );
 
         setFriends([...mappedUsers, ...mappedFriends]);
+        setSpaces(spacesSnap.docs.map(d => ({ id: d.id, ...d.data() })));
       } finally {
         setLoading(false);
       }
@@ -99,13 +106,20 @@ export default function PostPage() {
         },
       };
 
+      if (spaceId) data.spaceId = spaceId;
+
       if (title) data.title = title;
       if (caption) data.caption = caption;
       if (color) data.color = color;
 
       if (type === 'image' && mediaUrl) data.imageUrl = mediaUrl;
       else if (type === 'audio' && mediaUrl) data.audioUrl = mediaUrl;
-      else if (type === 'video' && mediaUrl) data.videoUrl = mediaUrl;
+      else if (type === 'video' && mediaUrl) {
+        data.videoUrl = mediaUrl;
+        if (mediaAspectRatio !== 'original') {
+          data.mediaAspectRatio = mediaAspectRatio;
+        }
+      }
 
       await addDoc(collection(db, 'cards'), data);
       toast.success('FILE ADDED TO THE WALL 🔥');
@@ -128,9 +142,28 @@ export default function PostPage() {
       >
         <Nav />
         <main className="flex-1 max-w-2xl w-full mx-auto px-4 py-5 md:py-8">
-          <h1 className="font-brutal text-3xl md:text-4xl mb-5">➕ ADD FILE</h1>
+          <h1 className="font-brutal text-3xl md:text-4xl mb-5 flex items-center gap-2">
+            <Plus className="w-8 h-8 md:w-10 md:h-10" strokeWidth={3} /> ADD FILE
+          </h1>
 
           <form onSubmit={handleSubmit} className="panel-brutal flex flex-col gap-5">
+            
+            {/* Location (Space) Selection */}
+            {spaces.length > 0 && (
+              <div>
+                <label className="block font-brutal text-xs mb-2 uppercase tracking-wider">LOCATION</label>
+                <select 
+                  value={spaceId} 
+                  onChange={(e) => setSpaceId(e.target.value)}
+                  className="input-brutal w-full"
+                >
+                  <option value="">Global Wall</option>
+                  {spaces.map(s => (
+                    <option key={s.id} value={s.id}>Private: {s.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             {/* Type Selection — horizontal scroll */}
             <div>
@@ -146,7 +179,7 @@ export default function PostPage() {
                     }`}
                     style={{ boxShadow: type === t ? '3px 3px 0px #F5F500' : '2px 2px 0px #000', minWidth: 56 }}
                   >
-                    <span className="text-base">{TYPE_ICONS[t]}</span>
+                    <span className="flex items-center justify-center h-6">{TYPE_ICONS[t]}</span>
                     {t.toUpperCase()}
                   </button>
                 ))}
@@ -158,7 +191,10 @@ export default function PostPage() {
               <div>
                 <label className="block font-brutal text-xs mb-2 uppercase tracking-wider">MEDIA</label>
                 <UploadZone
-                  onUpload={(url) => setMediaUrl(url)}
+                  onUpload={(url, ratio) => {
+                    setMediaUrl(url);
+                    if (ratio) setMediaAspectRatio(ratio);
+                  }}
                   currentUrl={mediaUrl}
                   acceptAudio={['audio', 'video'].includes(type)}
                 />

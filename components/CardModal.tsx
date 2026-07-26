@@ -92,7 +92,17 @@ export default function CardModal({ card, friends, onClose }: CardModalProps) {
 
           {card.type === 'video' && card.videoUrl && (
             <div className="border-[3px] border-black overflow-hidden bg-black">
-              <video src={card.videoUrl} controls className="w-full aspect-square object-cover" />
+              <video 
+                src={card.videoUrl} 
+                controls 
+                className={`w-full object-cover ${
+                  !card.mediaAspectRatio || card.mediaAspectRatio === '1:1' ? 'aspect-square' :
+                  card.mediaAspectRatio === 'original' ? '' :
+                  card.mediaAspectRatio === '4:3' ? 'aspect-[4/3]' :
+                  card.mediaAspectRatio === '16:9' ? 'aspect-video' :
+                  card.mediaAspectRatio === '9:16' ? 'aspect-[9/16]' : 'aspect-square'
+                }`} 
+              />
             </div>
           )}
 

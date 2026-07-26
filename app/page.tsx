@@ -53,7 +53,7 @@ export default function HomePage() {
         );
 
         setFriends([...mappedUsers, ...mappedFriends]);
-        setCards(cardsSnap.docs.map((d) => ({ id: d.id, ...d.data() } as Card)));
+        setCards(cardsSnap.docs.map((d) => ({ id: d.id, ...d.data() } as Card)).filter(c => !c.spaceId));
       } catch (err) {
         console.error('Failed to load data:', err);
       } finally {

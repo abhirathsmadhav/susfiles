@@ -81,6 +81,7 @@ export default function FriendsPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="input-brutal w-full py-2 px-3 text-sm bg-white"
+              suppressHydrationWarning
             />
           </div>
         </div>

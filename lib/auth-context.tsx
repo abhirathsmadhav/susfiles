@@ -60,7 +60,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const ref = doc(db, 'users', firebaseUser.uid);
           const snap = await getDoc(ref);
           if (snap.exists()) {
-            setProfile(snap.data() as UserProfile);
+            setProfile({ uid: snap.id, ...snap.data() } as UserProfile);
           } else {
             // First-time user — create profile with default 'user' role
             const newProfile: Omit<UserProfile, 'uid'> = {

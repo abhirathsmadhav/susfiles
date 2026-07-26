@@ -13,6 +13,7 @@ import {
   LogIn,
   LogOut,
   User,
+  Lock,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -51,6 +52,7 @@ export default function Nav() {
             {[
               { href: '/', label: 'THE WALL', icon: <LayoutGrid className="w-4 h-4" /> },
               { href: '/friends', label: 'THE CREW', icon: <Users className="w-4 h-4" /> },
+              { href: '/spaces', label: 'SPACES', icon: <Lock className="w-4 h-4" /> },
             ].map((l) => (
               <Link
                 key={l.href}
@@ -173,6 +175,19 @@ export default function Nav() {
           <Users className="w-5 h-5" />
           <span className="font-brutal text-[9px] leading-none uppercase">Crew</span>
         </Link>
+
+        {/* Spaces */}
+        {user && !isGuest && (
+          <Link
+            href="/spaces"
+            className={`flex flex-col items-center justify-center flex-1 py-2 gap-0.5 border-r-[3px] border-black transition-colors ${
+              isActive('/spaces') ? 'bg-black text-acid-yellow' : 'hover:bg-black/10'
+            }`}
+          >
+            <Lock className="w-5 h-5" />
+            <span className="font-brutal text-[9px] leading-none uppercase">Spaces</span>
+          </Link>
+        )}
 
         {/* Profile (logged in) or Login */}
         {user ? (

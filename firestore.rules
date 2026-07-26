@@ -41,6 +41,15 @@ service cloud.firestore {
     }
 
     // ========================
+    // Spaces collection
+    // ========================
+    match /spaces/{spaceId} {
+      allow read, create, update: if isAuthenticated();
+      // Only the admin of the space can delete it
+      allow delete: if isAuthenticated() && resource.data.adminId == request.auth.uid;
+    }
+
+    // ========================
     // Usernames collection (Unique enforcement)
     // ========================
     match /usernames/{username} {

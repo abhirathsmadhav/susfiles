@@ -92,7 +92,7 @@ export default function FriendPage({ params }: Props) {
                 // Check if request is already sent
                 const q = query(
                   collection(db, 'friendRequests'),
-                  where('from', '==', currentUserProfile.uid),
+                  where('from', '==', authUser?.uid || currentUserProfile.uid || ''),
                   where('to', '==', id),
                   where('status', '==', 'pending')
                 );
@@ -123,21 +123,21 @@ export default function FriendPage({ params }: Props) {
       }
     }
     
-    if (currentUserProfile !== undefined) {
+    if (currentUserProfile !== undefined && authUser !== undefined) {
       load();
     }
-  }, [id, currentUserProfile]);
+  }, [id, currentUserProfile, authUser]);
 
   const handleSendRequest = async () => {
-    if (!currentUserProfile) return;
-    if (authUser?.isAnonymous) {
+    if (!currentUserProfile || !authUser) return;
+    if (authUser.isAnonymous) {
       toast.error('Guests cannot send friend requests.');
       return;
     }
     setActionLoading(true);
     try {
       const docRef = await addDoc(collection(db, 'friendRequests'), {
-        from: currentUserProfile.uid,
+        from: authUser.uid,
         to: id,
         status: 'pending',
         createdAt: new Date().toISOString()

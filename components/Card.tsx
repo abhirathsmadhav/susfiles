@@ -109,7 +109,18 @@ export default function Card({ card, friends, onClick, isFeatured, style, classN
 
         {card.type === 'video' && card.videoUrl && (
           <div className="w-full border-b-[2px] border-black bg-black">
-            <video src={card.videoUrl} controls className="w-full aspect-square object-cover" onClick={(e) => e.stopPropagation()} />
+            <video 
+              src={card.videoUrl} 
+              controls 
+              className={`w-full object-cover ${
+                !card.mediaAspectRatio || card.mediaAspectRatio === '1:1' ? 'aspect-square' :
+                card.mediaAspectRatio === 'original' ? '' :
+                card.mediaAspectRatio === '4:3' ? 'aspect-[4/3]' :
+                card.mediaAspectRatio === '16:9' ? 'aspect-video' :
+                card.mediaAspectRatio === '9:16' ? 'aspect-[9/16]' : 'aspect-square'
+              }`} 
+              onClick={(e) => e.stopPropagation()} 
+            />
           </div>
         )}
 

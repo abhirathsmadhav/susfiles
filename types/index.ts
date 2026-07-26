@@ -58,8 +58,21 @@ export interface Card {
   reactions: Reactions;
   createdAt: string;
   createdBy: string;
+  spaceId?: string;        // ID of the private space this belongs to
+  mediaAspectRatio?: 'original' | '1:1' | '4:3' | '16:9' | '9:16';
 }
 
-// For create/update forms — omits server-generated fields
+export interface Space {
+  id: string;
+  name: string;
+  description?: string;
+  adminId: string;
+  memberIds: string[];
+  backgroundColor: string; // E.g., '#F0EDE0', '#111111', etc.
+  gridStyle: 'none' | 'dots' | 'grid';
+  createdAt: string;
+}
+
 export type FriendInput = Omit<Friend, 'id' | 'createdAt'>;
 export type CardInput = Omit<Card, 'id' | 'createdAt' | 'createdBy' | 'reactions'>;
+export type SpaceInput = Omit<Space, 'id' | 'createdAt'>;
