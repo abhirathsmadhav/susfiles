@@ -4,6 +4,7 @@ import { Card as CardType, Friend } from '@/types';
 import Image from 'next/image';
 import { motion, PanInfo } from 'framer-motion';
 import { useRef, useState } from 'react';
+import CassettePlayer from './CassettePlayer';
 
 interface CardProps {
   card: CardType;
@@ -38,22 +39,7 @@ function getTypeIcon(type: CardType['type']): string {
 export default function Card({ card, friends, onClick, isFeatured, style, className, isDraggable, onDragEnd }: CardProps) {
   const accent = getAccentColor(card, friends);
   const linkedFriends = friends.filter((f) => card.linkedFriendIds.includes(f.id));
-  const audioRef = useRef<HTMLAudioElement>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [audioProgress, setAudioProgress] = useState(0);
-
   const isAbsolute = style?.position === 'absolute';
-
-  const toggleAudio = () => {
-    if (audioRef.current) {
-      if (isPlaying) {
-        audioRef.current.pause();
-      } else {
-        audioRef.current.play();
-      }
-      setIsPlaying(!isPlaying);
-    }
-  };
 
   const handleDragEnd = (e: any, info: PanInfo) => {
     if (!isDraggable || !onDragEnd) return;
@@ -116,28 +102,8 @@ export default function Card({ card, friends, onClick, isFeatured, style, classN
 
         {/* Audio */}
         {card.type === 'audio' && card.audioUrl && (
-          <div className="w-full border-b-[2px] border-black p-3 bg-[#1A1A1A] flex items-center gap-3 min-h-[72px]">
-            <button
-              onClick={(e) => { e.stopPropagation(); toggleAudio(); }}
-              className="w-10 h-10 flex-shrink-0 flex items-center justify-center bg-[#F5F500] border-[2px] border-black hover:scale-110 active:scale-95 transition-transform"
-              style={{ boxShadow: '3px 3px 0px #000' }}
-            >
-              <span className="text-lg translate-x-[1px]">{isPlaying ? '⏸' : '▶'}</span>
-            </button>
-            <div className="flex-1 h-2.5 bg-white border-[2px] border-black relative overflow-hidden" style={{ boxShadow: '2px 2px 0px #000' }}>
-              <div className="absolute left-0 top-0 bottom-0 bg-[#FF2D78]" style={{ width: `${audioProgress}%`, transition: 'width 0.1s linear' }} />
-            </div>
-            <audio
-              ref={audioRef}
-              src={card.audioUrl}
-              className="hidden"
-              onTimeUpdate={() => {
-                if (audioRef.current) {
-                  setAudioProgress((audioRef.current.currentTime / audioRef.current.duration) * 100);
-                }
-              }}
-              onEnded={() => setIsPlaying(false)}
-            />
+          <div className="w-full border-b-[2px] border-black">
+            <CassettePlayer audioUrl={card.audioUrl} title={card.title} color={accent} />
           </div>
         )}
 

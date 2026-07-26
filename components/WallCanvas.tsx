@@ -199,8 +199,7 @@ export default function WallCanvas({ cards, friends }: WallCanvasProps) {
     1280: 4,
     1024: 3,
     768: 2,
-    640: 2,
-    0: 1,
+    640: 1,
   };
 
   const toolbarControls = (
@@ -352,7 +351,7 @@ export default function WallCanvas({ cards, friends }: WallCanvasProps) {
             columnClassName="my-masonry-grid_column"
           >
             {scatterLayout.map(({ card }) => (
-              <div key={card.id}>
+              <div key={card.id} className="snap-center snap-always flex items-center justify-center min-h-[80vh] sm:min-h-0 sm:block sm:mb-0">
                 <Card
                   card={card}
                   friends={friends}
@@ -465,7 +464,7 @@ export default function WallCanvas({ cards, friends }: WallCanvasProps) {
           columnClassName="my-masonry-grid_column"
         >
           {scatterLayout.map(({ card }) => (
-            <div key={card.id}>
+            <div key={card.id} className="snap-center snap-always flex items-center justify-center min-h-[80vh] sm:min-h-0 sm:block sm:mb-0">
               <Card
                 card={card}
                 friends={friends}

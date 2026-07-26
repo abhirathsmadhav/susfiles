@@ -54,6 +54,11 @@ html {
   /* Prevent font-size scaling on orientation change (iOS) */
   -webkit-text-size-adjust: 100%;
 }
+@media (max-width: 639px) {
+  html {
+    scroll-snap-type: y mandatory;
+  }
+}
 
 body {
   font-family: 'Space Grotesk', sans-serif;

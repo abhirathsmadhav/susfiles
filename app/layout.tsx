@@ -46,13 +46,13 @@ export default function RootLayout({
                 },
               }}
             />
-            {/* Legal link — hidden on mobile (overlaps nav) */}
-            <div className="hidden md:block fixed bottom-4 left-4 font-mono text-xs font-bold opacity-60 z-[999]">
+            {/* Legal link */}
+            <div className="fixed bottom-[calc(72px+env(safe-area-inset-bottom,0px))] md:bottom-4 left-4 font-mono text-[10px] md:text-xs font-bold opacity-60 z-[90]">
               <a href="/legal" className="hover:underline hover:text-hot-pink transition-colors">
                 LEGAL / PRIVACY
               </a>
             </div>
-            <div className="hidden md:block fixed bottom-4 right-4 font-mono text-xs font-bold opacity-40 pointer-events-none z-[999]">
+            <div className="fixed bottom-[calc(72px+env(safe-area-inset-bottom,0px))] md:bottom-4 right-4 font-mono text-[10px] md:text-xs font-bold opacity-40 pointer-events-none z-[90]">
               DEVELOPED BY GHOST
             </div>
           </AuthProvider>
