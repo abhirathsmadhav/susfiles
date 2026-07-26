@@ -133,6 +133,8 @@ export default function HomePage() {
                 { n: '2', color: '#FF2D78', title: 'Compile Evidence', body: 'Upload photos, quotes, or weird texts to The Wall.' },
                 { n: '3', color: '#39FF14', title: 'Connect the Dots', body: 'Tag suspects in the evidence. Use Tree Mode to connect the string.' },
                 { n: '4', color: '#0066FF', title: 'Roast & React', body: "Leave emoji reactions. The most unhinged file becomes 'Roast of the Day'." },
+                { n: '5', color: '#9D00FF', title: 'Private Spaces', body: 'Create encrypted walls. Lock evidence behind closed doors for invited eyes only.' },
+                { n: '6', color: '#FFFFFF', title: 'Go Ghost', body: 'Browse the main archives anonymously without leaving a digital footprint.' },
               ].map((item) => (
                 <div key={item.n} className="panel-brutal bg-white">
                   <div className="flex items-center gap-3 mb-2">
