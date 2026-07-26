@@ -119,6 +119,7 @@ export default function LoginPage() {
                     className="input-brutal"
                     placeholder="Your name"
                     autoComplete="name"
+                    suppressHydrationWarning
                   />
                 </div>
               )}
@@ -134,6 +135,7 @@ export default function LoginPage() {
                   placeholder="you@example.com"
                   autoComplete="email"
                   inputMode="email"
+                  suppressHydrationWarning
                 />
               </div>
 
@@ -160,6 +162,7 @@ export default function LoginPage() {
                     className="input-brutal pr-12"
                     placeholder="••••••••"
                     autoComplete={isSignup ? 'new-password' : 'current-password'}
+                    suppressHydrationWarning
                   />
                   <button
                     type="button"

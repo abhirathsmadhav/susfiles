@@ -23,7 +23,7 @@ const TYPE_ICONS: Record<CardType, string> = {
 
 export default function PostPage() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [friends, setFriends] = useState<Friend[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -46,7 +46,7 @@ export default function PostPage() {
         ]);
 
         const mappedUsers: Friend[] = usersSnap.docs
-          .filter((d) => d.data().username)
+          .filter((d) => d.data().username && (profile?.friendIds?.includes(d.data().uid) || d.data().uid === user?.uid))
           .map((d) => {
             const data = d.data();
             return {
@@ -225,11 +225,11 @@ export default function PostPage() {
                         f.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                         f.nickname?.toLowerCase().includes(searchQuery.toLowerCase())
                     )
-                    .map((f) => {
+                    .map((f, i) => {
                       const isSelected = selectedFriends.includes(f.id);
                       return (
                         <button
-                          key={f.id}
+                          key={`${f.id}-${i}`}
                           type="button"
                           onClick={() =>
                             setSelectedFriends((prev) =>

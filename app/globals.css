@@ -56,7 +56,7 @@ html {
 }
 @media (max-width: 639px) {
   html {
-    scroll-snap-type: y mandatory;
+    scroll-snap-type: y proximity;
   }
 }
 

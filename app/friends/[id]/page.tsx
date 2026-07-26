@@ -9,13 +9,17 @@ import {
   query,
   where,
   orderBy,
+  addDoc,
+  deleteDoc
 } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
-import { Friend, Card } from '@/types';
+import { Friend, Card, UserProfile } from '@/types';
 import Nav from '@/components/Nav';
 import WallCanvas from '@/components/WallCanvas';
 import Link from 'next/link';
 import { use } from 'react';
+import toast from 'react-hot-toast';
+import { useAuth } from '@/lib/auth-context';
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -23,13 +27,22 @@ interface Props {
 
 export default function FriendPage({ params }: Props) {
   const { id } = use(params);
+  const { user: authUser, profile: currentUserProfile } = useAuth();
+  
   const [friend, setFriend] = useState<Friend | null>(null);
   const [allFriends, setAllFriends] = useState<Friend[]>([]);
   const [cards, setCards] = useState<Card[]>([]);
+  
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [isUser, setIsUser] = useState(false);
   const [currentUserUid, setCurrentUserUid] = useState<string | null>(null);
+
+  // Friend Request State
+  const [isFriend, setIsFriend] = useState(false);
+  const [requestSent, setRequestSent] = useState(false);
+  const [requestId, setRequestId] = useState<string | null>(null);
+  const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
     const unsub = auth.onAuthStateChanged((u) => setCurrentUserUid(u?.uid || null));
@@ -59,17 +72,37 @@ export default function FriendPage({ params }: Props) {
         } else {
           const userSnap = await getDoc(doc(db, 'users', id));
           if (userSnap.exists()) {
-            const uData = userSnap.data();
+            const uData = userSnap.data() as UserProfile;
             friendData = {
               id: userSnap.id,
               name: uData.displayName || 'Unknown',
-              nickname: uData.callSign || (uData.username ? `@${uData.username}` : undefined),
-              avatarUrl: uData.avatarUrl,
+              nickname: uData.callSign || (uData.username ? `@${uData.username}` : ''),
+              avatarUrl: uData.avatarUrl || '',
               signatureColor: uData.signatureColor || '#F5F500',
-              tagline: uData.tagline || '',
+              tagline: '',
               createdAt: uData.createdAt,
             };
             isRegisteredUser = true;
+
+            // Check friendship status
+            if (currentUserProfile) {
+              if (currentUserProfile.friendIds?.includes(id)) {
+                setIsFriend(true);
+              } else {
+                // Check if request is already sent
+                const q = query(
+                  collection(db, 'friendRequests'),
+                  where('from', '==', currentUserProfile.uid),
+                  where('to', '==', id),
+                  where('status', '==', 'pending')
+                );
+                const reqSnap = await getDocs(q);
+                if (!reqSnap.empty) {
+                  setRequestSent(true);
+                  setRequestId(reqSnap.docs[0].id);
+                }
+              }
+            }
           }
         }
 
@@ -89,8 +122,50 @@ export default function FriendPage({ params }: Props) {
         setLoading(false);
       }
     }
-    load();
-  }, [id]);
+    
+    if (currentUserProfile !== undefined) {
+      load();
+    }
+  }, [id, currentUserProfile]);
+
+  const handleSendRequest = async () => {
+    if (!currentUserProfile) return;
+    if (authUser?.isAnonymous) {
+      toast.error('Guests cannot send friend requests.');
+      return;
+    }
+    setActionLoading(true);
+    try {
+      const docRef = await addDoc(collection(db, 'friendRequests'), {
+        from: currentUserProfile.uid,
+        to: id,
+        status: 'pending',
+        createdAt: new Date().toISOString()
+      });
+      setRequestSent(true);
+      setRequestId(docRef.id);
+      toast.success('Friend request sent! 📨');
+    } catch (err) {
+      toast.error('Failed to send request');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleCancelRequest = async () => {
+    if (!requestId) return;
+    setActionLoading(true);
+    try {
+      await deleteDoc(doc(db, 'friendRequests', requestId));
+      setRequestSent(false);
+      setRequestId(null);
+      toast.success('Request cancelled');
+    } catch (err) {
+      toast.error('Failed to cancel request');
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -151,12 +226,43 @@ export default function FriendPage({ params }: Props) {
                 ✏️ EDIT PROFILE
               </Link>
             )}
+            {isUser && currentUserUid !== id && currentUserProfile && (
+              <>
+                {isFriend ? (
+                  <button
+                    disabled
+                    className="inline-flex items-center gap-1 font-brutal text-xs border-[2px] border-black px-3 py-2 bg-lime-green text-black"
+                    style={{ boxShadow: '2px 2px 0px #000' }}
+                  >
+                    🤝 FRIENDS
+                  </button>
+                ) : requestSent ? (
+                  <button
+                    onClick={handleCancelRequest}
+                    disabled={actionLoading}
+                    className="inline-flex items-center gap-1 font-brutal text-xs border-[2px] border-black px-3 py-2 bg-black text-white hover:bg-[#FF2D78] transition-colors"
+                    style={{ boxShadow: '2px 2px 0px #000' }}
+                  >
+                    {actionLoading ? '...' : 'CANCEL REQUEST'}
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleSendRequest}
+                    disabled={actionLoading}
+                    className="inline-flex items-center gap-1 font-brutal text-xs border-[2px] border-black px-3 py-2 bg-white hover:bg-black hover:text-white transition-colors"
+                    style={{ boxShadow: '2px 2px 0px #000' }}
+                  >
+                    {actionLoading ? '...' : '➕ ADD FRIEND'}
+                  </button>
+                )}
+              </>
+            )}
           </div>
 
           {/* Avatar + Info — horizontal on mobile */}
           <div className="flex items-center gap-4">
             <div
-              className="w-16 h-16 md:w-28 md:h-28 border-[3px] md:border-[4px] border-black overflow-hidden flex-shrink-0"
+              className="w-16 h-16 md:w-28 md:h-28 border-[3px] md:border-[4px] border-black overflow-hidden flex-shrink-0 bg-white"
               style={{ boxShadow: '4px 4px 0px #000' }}
             >
               {friend.avatarUrl ? (
@@ -170,22 +276,23 @@ export default function FriendPage({ params }: Props) {
             </div>
 
             <div className="min-w-0 flex-1">
-              <h1 className="font-brutal text-2xl md:text-5xl leading-none truncate">{friend.name}</h1>
+              <h1 className="font-brutal text-2xl md:text-5xl leading-none truncate bg-white inline-block px-2 border-2 border-black" style={{ boxShadow: '2px 2px 0px #000' }}>
+                {friend.name}
+              </h1>
               {friend.nickname && (
-                <p className="font-mono font-bold text-xs mt-0.5 opacity-60 uppercase">
-                  aka {friend.nickname}
+                <p className="font-mono font-bold text-xs mt-1 bg-black text-white inline-block px-2 ml-2">
+                  {friend.nickname.startsWith('@') ? '' : 'aka '}{friend.nickname}
                 </p>
               )}
               {friend.tagline && (
-                <p
-                  className="mt-2 text-sm italic border-l-4 border-black pl-3 line-clamp-2"
-                  style={{ fontFamily: 'Space Mono, monospace' }}
-                >
-                  &ldquo;{friend.tagline}&rdquo;
-                </p>
+                <div className="mt-2 inline-block">
+                  <p className="text-sm italic font-mono font-bold border-2 border-black pl-2 pr-3 py-0.5 bg-[#FAFAF5] text-black">
+                    &ldquo;{friend.tagline}&rdquo;
+                  </p>
+                </div>
               )}
               <div className="mt-2">
-                <span className="tag-brutal bg-black text-white text-xs">
+                <span className="tag-brutal bg-white text-black border-2 border-black text-xs">
                   {cards.length} FILE{cards.length !== 1 ? 'S' : ''}
                 </span>
               </div>

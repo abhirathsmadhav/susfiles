@@ -167,7 +167,7 @@ export default function HomePage() {
 
   // --- FEED / WALL (Logged In) ---
   return (
-    <div className="min-h-screen bg-off-white" style={{ paddingBottom: 'calc(64px + env(safe-area-inset-bottom, 0px))' }}>
+    <div className="min-h-screen bg-off-white snap-start" style={{ paddingBottom: 'calc(64px + env(safe-area-inset-bottom, 0px))' }}>
       <Nav />
 
       {/* Compact header */}

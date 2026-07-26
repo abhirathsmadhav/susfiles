@@ -17,10 +17,9 @@ service cloud.firestore {
     // Users collection
     // ========================
     match /users/{uid} {
-      // Users can read/write their own doc
-      allow read: if request.auth.uid == uid || isAuthenticated();
-      allow create, update: if request.auth.uid == uid;
-      allow delete: if false;
+      // Users can read their own doc, and others can read to see profiles.
+      // We allow write if authenticated to support adding friendIds without a backend.
+      allow read, write: if isAuthenticated();
     }
 
     // ========================
@@ -37,13 +36,18 @@ service cloud.firestore {
       allow read, write: if isAuthenticated();
     }
     
+    match /friendRequests/{requestId} {
+      allow read, write: if isAuthenticated();
+    }
+
     // ========================
     // Usernames collection (Unique enforcement)
     // ========================
     match /usernames/{username} {
       allow read: if isAuthenticated();
-      // Only allow creating if claiming for yourself
+      // Only allow creating or updating if claiming for yourself
       allow create: if isAuthenticated() && request.resource.data.uid == request.auth.uid;
+      allow update: if isAuthenticated() && request.resource.data.uid == request.auth.uid && resource.data.uid == request.auth.uid;
       allow delete: if isAuthenticated() && resource.data.uid == request.auth.uid;
     }
   }

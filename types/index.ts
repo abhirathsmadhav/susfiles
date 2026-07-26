@@ -14,6 +14,7 @@ export interface UserProfile {
   callSign?: string;
   avatarUrl?: string;
   signatureColor?: string;
+  friendIds?: string[];
   role: UserRole;
   createdAt: string;
 }
