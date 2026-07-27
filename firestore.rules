@@ -66,5 +66,12 @@ service cloud.firestore {
       allow update: if isAuthenticated() && request.resource.data.uid == request.auth.uid && resource.data.uid == request.auth.uid;
       allow delete: if isAuthenticated() && resource.data.uid == request.auth.uid;
     }
+
+    // ========================
+    // Notifications collection
+    // ========================
+    match /notifications/{notificationId} {
+      allow read, write: if isAuthenticated();
+    }
   }
 }

@@ -16,6 +16,7 @@ import {
   Lock,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import NotificationsDropdown from './NotificationsDropdown';
 
 export default function Nav() {
   const { user, isGuest, logout } = useAuth();
@@ -89,6 +90,7 @@ export default function Nav() {
 
           {user ? (
             <div className="flex items-center gap-2">
+              <NotificationsDropdown />
               <Link
                 href="/profile"
                 className="flex items-center gap-1 px-3 py-2 font-brutal text-xs uppercase border-[3px] border-black bg-white hover:bg-black hover:text-white transition-colors"
@@ -122,6 +124,7 @@ export default function Nav() {
         </Link>
         {user && !isGuest && (
           <div className="flex items-center gap-1.5">
+            <NotificationsDropdown />
             <Link
               href="/post"
               className="flex items-center gap-1 px-2.5 py-1.5 font-brutal text-[11px] uppercase border-[2px] border-black bg-lime-green text-black"

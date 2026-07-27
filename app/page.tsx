@@ -38,13 +38,14 @@ export default function HomePage() {
           .map((d) => {
             const data = d.data();
             return {
-              id: data.uid,
+              id: d.id,
               name: data.displayName || 'Unknown',
               nickname: data.callSign || `@${data.username}`,
               avatarUrl: data.avatarUrl,
               signatureColor: data.signatureColor || '#F5F500',
               tagline: data.tagline || '',
               createdAt: data.createdAt,
+              friendIds: data.friendIds || [],
             };
           });
 

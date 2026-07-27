@@ -41,6 +41,7 @@ export default function PostPage() {
   const [color, setColor] = useState('');
   const [spaceId, setSpaceId] = useState<string>('');
   const [mediaAspectRatio, setMediaAspectRatio] = useState<'original' | '1:1' | '4:3' | '16:9' | '9:16'>('original');
+  const [isClassified, setIsClassified] = useState(false);
 
   useEffect(() => {
     async function loadFriends() {
@@ -111,6 +112,7 @@ export default function PostPage() {
       if (title) data.title = title;
       if (caption) data.caption = caption;
       if (color) data.color = color;
+      if (isClassified) data.isClassified = true;
 
       if (type === 'image' && mediaUrl) data.imageUrl = mediaUrl;
       else if (type === 'audio' && mediaUrl) data.audioUrl = mediaUrl;
@@ -121,7 +123,25 @@ export default function PostPage() {
         }
       }
 
-      await addDoc(collection(db, 'cards'), data);
+      const cardDoc = await addDoc(collection(db, 'cards'), data);
+      
+      // Generate notifications for tagged users
+      if (user) {
+        selectedFriends.forEach(async (taggedId) => {
+          if (taggedId !== user.uid) { // Don't notify yourself
+            await addDoc(collection(db, 'notifications'), {
+              toUid: taggedId,
+              fromUid: user.uid,
+              type: 'tag',
+              message: `${profile?.displayName || 'Someone'} tagged you in a highly suspect file.`,
+              cardId: cardDoc.id,
+              read: false,
+              createdAt: new Date().toISOString()
+            });
+          }
+        });
+      }
+
       toast.success('FILE ADDED TO THE WALL 🔥');
       router.push('/');
     } catch (err) {
@@ -200,6 +220,20 @@ export default function PostPage() {
                 />
               </div>
             )}
+
+            {/* Highly Classified Checkbox */}
+            <div className="flex items-center gap-3 mt-2 mb-2 p-3 border-2 border-black bg-acid-yellow">
+              <input
+                type="checkbox"
+                id="classified"
+                checked={isClassified}
+                onChange={(e) => setIsClassified(e.target.checked)}
+                className="w-5 h-5 accent-black border-2 border-black cursor-pointer"
+              />
+              <label htmlFor="classified" className="font-brutal text-sm cursor-pointer select-none">
+                HIGHLY CLASSIFIED (BLUR ON WALL)
+              </label>
+            </div>
 
             {/* Content */}
             <div>

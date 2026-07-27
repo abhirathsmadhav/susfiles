@@ -87,7 +87,18 @@ export default function Card({ card, friends, onClick, isFeatured, style, classN
         {/* Accent bar */}
         <div className="h-2.5 w-full" style={{ background: accent }} />
 
-        {/* Type tag row */}
+        <div className="relative w-full h-full">
+          {card.isClassified && (
+            <div className="absolute inset-0 z-10 backdrop-blur-xl bg-white/40 flex items-center justify-center overflow-hidden">
+              <div 
+                className="w-[140%] text-center transform -rotate-[15deg] bg-black text-acid-yellow font-brutal font-bold text-sm py-2 border-y-[3px] border-acid-yellow shadow-[0_4px_15px_rgba(0,0,0,0.5)] pointer-events-none"
+              >
+                CLASSIFIED<br/>TAP TO DECRYPT
+              </div>
+            </div>
+          )}
+
+          {/* Type tag row */}
         <div className="flex items-center justify-between px-3 pt-2 pb-1">
           <span
             className="tag-brutal text-[10px]"
@@ -197,6 +208,7 @@ export default function Card({ card, friends, onClick, isFeatured, style, classN
             )}
           </div>
         )}
+        </div>
       </div>
     </motion.div>
   );

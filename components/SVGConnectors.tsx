@@ -8,6 +8,7 @@ interface Line {
   x2: number;
   y2: number;
   color?: string;
+  dashed?: boolean;
 }
 
 interface SVGConnectorsProps {
@@ -71,9 +72,10 @@ export default function SVGConnectors({ lines, width, height }: SVGConnectorsPro
               strokeWidth="4"
               fill="none"
               strokeLinecap="round"
+              strokeDasharray={line.dashed ? "12, 12" : undefined}
               filter="url(#rough)"
             />
-            {/* Dot at card end */}
+            {/* Dot at target end */}
             <circle
               cx={line.x2}
               cy={line.y2}

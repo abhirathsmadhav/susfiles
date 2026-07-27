@@ -1,15 +1,17 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { doc, updateDoc, increment } from 'firebase/firestore';
+import { doc, updateDoc, increment, collection, addDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Reactions } from '@/types';
+import { useAuth } from '@/lib/auth-context';
 import toast from 'react-hot-toast';
 import JSConfetti from 'js-confetti';
 
 interface EmojiReactionsProps {
   cardId: string;
   reactions: Reactions;
+  cardCreatorId?: string;
 }
 
 const EMOJIS: (keyof Reactions)[] = ['💀', '🔥', '😭', '🤡'];
@@ -21,7 +23,8 @@ const LABELS: Record<keyof Reactions, string> = {
   '🤡': 'CLOWNED',
 };
 
-export default function EmojiReactions({ cardId, reactions }: EmojiReactionsProps) {
+export default function EmojiReactions({ cardId, reactions, cardCreatorId }: EmojiReactionsProps) {
+  const { user, profile } = useAuth();
   const [localReactions, setLocalReactions] = useState<Reactions>({ ...reactions });
   const [reacted, setReacted] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState<string | null>(null);
@@ -45,6 +48,18 @@ export default function EmojiReactions({ cardId, reactions }: EmojiReactionsProp
       });
       setLocalReactions((prev) => ({ ...prev, [emoji]: (prev[emoji] ?? 0) + 1 }));
       setReacted((prev) => new Set([...prev, emoji]));
+      
+      if (user && cardCreatorId && cardCreatorId !== user.uid) {
+        await addDoc(collection(db, 'notifications'), {
+          toUid: cardCreatorId,
+          fromUid: user.uid,
+          type: 'reaction',
+          message: `${profile?.displayName || 'Someone'} reacted ${emoji} to your file.`,
+          cardId,
+          read: false,
+          createdAt: new Date().toISOString()
+        });
+      }
       
       // Rain emojis! 🌧️
       if (confettiRef.current) {

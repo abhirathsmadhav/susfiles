@@ -2,8 +2,10 @@
 
 import AuthGuard from '@/components/AuthGuard';
 import { useState, useEffect } from 'react';
-import { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, query, where, getDocs, onSnapshot, arrayUnion } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, query, where, getDocs, onSnapshot, arrayUnion, addDoc, getCountFromServer } from 'firebase/firestore';
+import { db, auth } from '@/lib/firebase';
+import { deleteUser, EmailAuthProvider, reauthenticateWithCredential, GoogleAuthProvider, reauthenticateWithPopup } from 'firebase/auth';
+import { useRouter } from 'next/navigation';
 import { Card } from '@/types';
 import { useAuth } from '@/lib/auth-context';
 import UploadZone from '@/components/UploadZone';
@@ -22,6 +24,15 @@ export default function ProfilePage() {
   const [requests, setRequests] = useState<any[]>([]);
   const [spaceInvitations, setSpaceInvitations] = useState<any[]>([]);
   const [postToDelete, setPostToDelete] = useState<string | null>(null);
+
+  // Account Deletion State
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const router = useRouter();
+
+  // Rap Sheet Stats
+  const [stats, setStats] = useState({ uploads: 0, tagged: 0 });
 
   // Form State
   const [username, setUsername] = useState(profile?.username || '');
@@ -76,18 +87,38 @@ export default function ProfilePage() {
       }));
       setRequests(populated);
     });
-    return unsub;
-    return unsub;
-  }, [user]);
 
-  // Load Space Invitations
-  useEffect(() => {
-    if (!user) return;
-    const q = query(collection(db, 'spaceInvitations'), where('toUid', '==', user.uid), where('status', '==', 'pending'));
-    const unsub = onSnapshot(q, (snap) => {
+    // Listen to space invitations
+    const invQ = query(collection(db, 'spaceInvitations'), where('toUid', '==', user.uid), where('status', '==', 'pending'));
+    const unsubInv = onSnapshot(invQ, (snap) => {
       setSpaceInvitations(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
-    return unsub;
+
+    // Fetch Rap Sheet Stats
+    const fetchStats = async () => {
+      try {
+        const uploadsQuery = query(collection(db, 'cards'), where('createdBy', '==', user.uid));
+        const tagsQuery = query(collection(db, 'cards'), where('linkedFriendIds', 'array-contains', user.uid));
+        
+        const [uploadsSnap, tagsSnap] = await Promise.all([
+          getCountFromServer(uploadsQuery),
+          getCountFromServer(tagsQuery)
+        ]);
+        
+        setStats({
+          uploads: uploadsSnap.data().count,
+          tagged: tagsSnap.data().count
+        });
+      } catch (e) {
+        console.error('Failed to fetch stats', e);
+      }
+    };
+    fetchStats();
+
+    return () => {
+      unsub();
+      unsubInv();
+    };
   }, [user]);
 
   const handleAcceptRequest = async (req: any) => {
@@ -99,6 +130,16 @@ export default function ProfilePage() {
         friendIds: arrayUnion(user!.uid)
       });
       await deleteDoc(doc(db, 'friendRequests', req.id));
+
+      await addDoc(collection(db, 'notifications'), {
+        toUid: req.from,
+        fromUid: user!.uid,
+        type: 'invite_accepted',
+        message: `${profile?.displayName || 'Someone'} accepted your crew invite! 🤝`,
+        read: false,
+        createdAt: new Date().toISOString()
+      });
+
       toast.success('Friend added to Crew! 🤝');
       setTimeout(() => window.location.reload(), 1000);
     } catch (err) {
@@ -208,6 +249,50 @@ export default function ProfilePage() {
     }
   };
 
+  const handleDeleteAccount = async () => {
+    if (!user || !profile) return;
+    setIsDeletingAccount(true);
+    try {
+      // 1. Re-authenticate
+      const providerId = user.providerData[0]?.providerId;
+      if (providerId === 'password') {
+        if (!deletePassword) {
+          toast.error('Password required to delete account');
+          setIsDeletingAccount(false);
+          return;
+        }
+        const credential = EmailAuthProvider.credential(user.email!, deletePassword);
+        await reauthenticateWithCredential(user, credential);
+      } else if (providerId === 'google.com') {
+        const provider = new GoogleAuthProvider();
+        await reauthenticateWithPopup(user, provider);
+      }
+
+      // 2. Clean up Firestore
+      if (profile.username) {
+        await deleteDoc(doc(db, 'usernames', profile.username));
+      }
+      await deleteDoc(doc(db, 'users', user.uid));
+
+      // 3. Delete Auth User
+      await deleteUser(user);
+      
+      // 4. Redirect
+      document.cookie = 'sus-session=; Max-Age=0; path=/';
+      toast.success('Account permanently deleted. 💀');
+      router.push('/');
+    } catch (err: any) {
+      console.error(err);
+      if (err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+        toast.error('Incorrect password');
+      } else {
+        toast.error('Failed to delete account');
+      }
+    } finally {
+      setIsDeletingAccount(false);
+    }
+  };
+
   const presetColors = [
     '#F5F500', '#FF2D78', '#0066FF', '#39FF14',
     '#FF5F1F', '#9000FF', '#FFFFFF', '#000000',
@@ -250,25 +335,32 @@ export default function ProfilePage() {
                 </div>
 
                 <div className="min-w-0 flex-1">
-                  <h1 className="font-brutal text-3xl md:text-5xl leading-none truncate bg-white inline-block px-2 border-2 border-black" style={{ boxShadow: '2px 2px 0px #000' }}>
-                    {profile.displayName}
-                  </h1>
-                  <p className="font-mono font-bold text-sm mt-1 uppercase bg-black text-white inline-block px-2 ml-2">
-                    @{profile.username}
-                  </p>
+                  <h2 className="font-brutal text-3xl md:text-4xl leading-none">
+                    {profile.displayName.toUpperCase()}
+                  </h2>
                   {profile.callSign && (
-                    <div className="mt-2 inline-block">
-                      <p className="text-sm italic font-mono font-bold border-2 border-black pl-2 pr-3 py-0.5 bg-[#FAFAF5] text-black">
-                        aka &quot;{profile.callSign}&quot;
-                      </p>
-                    </div>
+                    <p className="font-mono text-xs md:text-sm mt-1 opacity-80 uppercase tracking-wider">
+                      AKA {profile.callSign}
+                    </p>
                   )}
-                  <div className="mt-3">
-                    <span className="tag-brutal bg-white text-black border-2 border-black">
-                      👥 {profile.friendIds?.length || 0} FRIENDS
-                    </span>
-                  </div>
+                  {profile.username && (
+                    <p className="font-mono text-xs md:text-sm mt-0.5 opacity-80 uppercase tracking-wider">
+                      @{profile.username}
+                    </p>
+                  )}
                 </div>
+              </div>
+            </div>
+
+            {/* Rap Sheet Stats */}
+            <div className="flex bg-black text-acid-yellow border-t-4 border-black divide-x-4 divide-black">
+              <div className="flex-1 p-3 text-center">
+                <div className="font-brutal text-2xl">{stats.uploads}</div>
+                <div className="font-brutal text-xs tracking-wider opacity-80">FILES UPLOADED</div>
+              </div>
+              <div className="flex-1 p-3 text-center">
+                <div className="font-brutal text-2xl">{stats.tagged}</div>
+                <div className="font-brutal text-xs tracking-wider opacity-80">TIMES TAGGED</div>
               </div>
             </div>
           </div>
@@ -362,6 +454,18 @@ export default function ProfilePage() {
                   <button type="submit" disabled={saving} className="btn-brutal bg-hot-pink text-white w-full text-base py-4">
                     {saving ? 'SAVING...' : 'SAVE PROFILE'}
                   </button>
+                  
+                  <div className="mt-8 pt-6 border-t-[3px] border-black">
+                    <h3 className="font-brutal text-lg text-[#FF2D78] mb-2">DANGER ZONE</h3>
+                    <p className="font-mono text-xs opacity-60 mb-4">Permanently delete your account and profile data. This cannot be undone.</p>
+                    <button 
+                      type="button" 
+                      onClick={() => setShowDeleteModal(true)}
+                      className="btn-brutal bg-black text-[#FF2D78] w-full text-sm py-3 border-[#FF2D78] hover:bg-[#FF2D78] hover:text-white"
+                    >
+                      DELETE ACCOUNT
+                    </button>
+                  </div>
                 </form>
               </>
             )}
@@ -497,6 +601,49 @@ export default function ProfilePage() {
                   className="btn-brutal flex-1 bg-[#FF2D78] text-white hover:bg-black hover:text-[#FF2D78]"
                 >
                   YES, DELETE
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Account Deletion Modal */}
+        {showDeleteModal && (
+          <div className="modal-overlay z-[210]">
+            <div className="panel-brutal bg-white w-full max-w-sm animate-slide-up">
+              <h2 className="font-brutal text-2xl mb-2 text-[#FF2D78]">DELETE ACCOUNT?</h2>
+              <p className="font-mono text-xs opacity-80 mb-5">
+                This will permanently delete your profile and username. Your posts will remain as &quot;Deleted User&quot;.<br/><br/>
+                For security, please confirm your identity.
+              </p>
+              
+              {user?.providerData[0]?.providerId === 'password' && (
+                <div className="mb-5">
+                  <label className="block font-brutal text-xs mb-1.5 uppercase tracking-wider">ENTER PASSWORD</label>
+                  <input
+                    type="password"
+                    value={deletePassword}
+                    onChange={(e) => setDeletePassword(e.target.value)}
+                    className="input-brutal w-full"
+                    placeholder="••••••••"
+                  />
+                </div>
+              )}
+              
+              <div className="flex gap-2 mt-2">
+                <button 
+                  onClick={() => setShowDeleteModal(false)}
+                  className="btn-brutal flex-1 bg-white hover:bg-black hover:text-white"
+                  disabled={isDeletingAccount}
+                >
+                  CANCEL
+                </button>
+                <button 
+                  onClick={handleDeleteAccount}
+                  className="btn-brutal flex-1 bg-[#FF2D78] text-white hover:bg-black hover:text-[#FF2D78]"
+                  disabled={isDeletingAccount}
+                >
+                  {isDeletingAccount ? 'DELETING...' : (user?.providerData[0]?.providerId === 'google.com' ? 'VERIFY & DELETE' : 'DELETE FOREVER')}
                 </button>
               </div>
             </div>

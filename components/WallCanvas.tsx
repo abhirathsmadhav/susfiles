@@ -42,7 +42,7 @@ function getScatterLayout(cards: CardType[], shuffleSeed: number) {
 interface NetworkLayout {
   friends: { friend: Friend; x: number; y: number }[];
   cards: { card: CardType; x: number; y: number }[];
-  lines: { x1: number; y1: number; x2: number; y2: number; color: string }[];
+  lines: { x1: number; y1: number; x2: number; y2: number; color: string; dashed?: boolean }[];
   totalWidth: number;
   totalHeight: number;
 }
@@ -112,6 +112,32 @@ function getNetworkLayout(cards: CardType[], friends: Friend[]): NetworkLayout {
         y2: cardY + 150, // center Y of card
         color: fData?.signatureColor || '#000',
       });
+    });
+  });
+
+  // Connect friends to other friends
+  const drawnLines = new Set<string>();
+  friends.forEach(friend => {
+    const p1 = friendPos.get(friend.id);
+    if (!p1 || !friend.friendIds) return;
+    
+    friend.friendIds.forEach(targetId => {
+      const p2 = friendPos.get(targetId);
+      if (p2) {
+        // Ensure we only draw one line per pair
+        const hash = [friend.id, targetId].sort().join('-');
+        if (!drawnLines.has(hash)) {
+          drawnLines.add(hash);
+          result.lines.push({
+            x1: p1.x,
+            y1: p1.y,
+            x2: p2.x,
+            y2: p2.y,
+            color: friend.signatureColor || '#888',
+            dashed: true,
+          });
+        }
+      }
     });
   });
 
@@ -205,31 +231,29 @@ export default function WallCanvas({ cards, friends }: WallCanvasProps) {
   const toolbarControls = (
     <div className="flex flex-col gap-3 w-full">
       <div className="flex items-center gap-2 justify-between flex-wrap">
-        {/* Mode buttons — hidden on mobile (only masonry shown) */}
-        <div className="hidden sm:flex items-center gap-1.5 flex-wrap">
+        {/* Mode buttons */}
+        <div className="flex items-center gap-1.5 flex-wrap">
           <button
             onClick={() => setMode('masonry')}
             className={`flex items-center gap-1 btn-brutal-sm ${mode === 'masonry' ? 'bg-black text-acid-yellow' : ''}`}
+            title="Masonry View"
           >
-            <LayoutGrid className="w-3.5 h-3.5" /> MASONRY
+            <LayoutGrid className="w-3.5 h-3.5" /> <span className="hidden sm:inline">MASONRY</span>
           </button>
           <button
             onClick={() => setMode('scatter')}
             className={`flex items-center gap-1 btn-brutal-sm ${mode === 'scatter' ? 'bg-black text-acid-yellow' : ''}`}
+            title="Scatter View"
           >
-            <Wind className="w-3.5 h-3.5" /> SCATTER
+            <Wind className="w-3.5 h-3.5" /> <span className="hidden sm:inline">SCATTER</span>
           </button>
           <button
             onClick={() => setMode('network')}
             className={`flex items-center gap-1 btn-brutal-sm ${mode === 'network' ? 'bg-black text-acid-yellow' : ''}`}
+            title="Network View"
           >
-            <Network className="w-3.5 h-3.5" /> NETWORK
+            <Network className="w-3.5 h-3.5" /> <span className="hidden sm:inline">NETWORK</span>
           </button>
-        </div>
-
-        {/* Mobile: only show masonry label */}
-        <div className="flex sm:hidden items-center gap-1.5">
-          <span className="font-brutal text-xs uppercase opacity-60">{filteredCards.length} files</span>
         </div>
 
         <div className="flex items-center gap-2 ml-auto">
@@ -237,11 +261,12 @@ export default function WallCanvas({ cards, friends }: WallCanvasProps) {
           <button
             onClick={() => setShowFilters(!showFilters)}
             className={`flex items-center gap-1 btn-brutal-sm ${showFilters ? 'bg-hot-pink text-white border-hot-pink' : ''}`}
+            title="Filter"
           >
-            <Search className="w-3.5 h-3.5" /> FILTER
+            <Search className="w-3.5 h-3.5" /> <span className="hidden sm:inline">FILTER</span>
           </button>
-          <button onClick={handleShuffle} className="flex items-center gap-1 btn-brutal-sm">
-            <Shuffle className="w-3.5 h-3.5" /> SHUFFLE
+          <button onClick={handleShuffle} className="flex items-center gap-1 btn-brutal-sm" title="Shuffle">
+            <Shuffle className="w-3.5 h-3.5" /> <span className="hidden sm:inline">SHUFFLE</span>
           </button>
         </div>
       </div>
@@ -282,7 +307,7 @@ export default function WallCanvas({ cards, friends }: WallCanvasProps) {
       {mode === 'scatter' && filteredCards.length > 0 && (
         <div
           ref={scatterRef}
-          className="hidden sm:block relative overflow-hidden bg-[#F0EDE0] cursor-grab active:cursor-grabbing w-full"
+          className="relative overflow-hidden bg-[#F0EDE0] cursor-grab active:cursor-grabbing w-full touch-none"
           style={{ height: 'calc(100vh - 195px)' }}
         >
           <motion.div
@@ -342,77 +367,14 @@ export default function WallCanvas({ cards, friends }: WallCanvasProps) {
         </div>
       )}
 
-      {/* Fallback to masonry when scatter/tree selected on mobile */}
-      {mode === 'scatter' && filteredCards.length > 0 && (
-        <div className="sm:hidden max-w-7xl mx-auto px-3 md:px-4 py-4 md:py-8 w-full">
-          <Masonry
-            breakpointCols={masonryBreakpoints}
-            className="my-masonry-grid"
-            columnClassName="my-masonry-grid_column"
-          >
-            {scatterLayout.map(({ card }) => (
-              <div key={card.id} className="snap-center snap-always flex items-center justify-center min-h-[80vh] sm:min-h-0 sm:block sm:mb-0">
-                <Card
-                  card={card}
-                  friends={friends}
-                  onClick={() => setActiveCard(card)}
-                  isFeatured={roastOfTheDay?.id === card.id}
-                />
-              </div>
-            ))}
-          </Masonry>
-        </div>
-      )}
+
 
       {/* ===== NETWORK MODE ===== */}
       {mode === 'network' && filteredCards.length > 0 && (
         <>
-          {/* Mobile: vertical timeline */}
-          <div className="sm:hidden flex flex-col gap-12 px-3 py-8 w-full max-w-7xl mx-auto">
-            {friends.map((friend) => {
-              const linked = filteredCards.filter((c) => c.linkedFriendIds.includes(friend.id));
-              if (linked.length === 0) return null;
-              return (
-                <div key={friend.id} className="relative flex flex-col items-center w-full max-w-sm mx-auto">
-                  <div className="z-10 relative bg-[#F0EDE0] p-2">
-                    <FriendNode friend={friend} isInline={true} />
-                  </div>
-                  <div
-                    className="w-[3px] absolute top-10 bottom-0 z-0"
-                    style={{ backgroundColor: friend.signatureColor || '#000' }}
-                  />
-                  <div className="flex flex-col gap-6 w-full mt-4 pl-6">
-                    {linked.map((card, idx) => {
-                      const isFeatured = roastOfTheDay?.id === card.id;
-                      const rot = idx % 2 === 0 ? 1.5 : -1.5;
-                      return (
-                        <div key={card.id} className="relative w-full">
-                          <div
-                            className="absolute -left-6 top-1/2 w-6 h-[3px] z-0 -translate-y-1/2"
-                            style={{ backgroundColor: friend.signatureColor || '#000' }}
-                          />
-                          <div className="relative z-10">
-                            <Card
-                              card={{ ...card, position: { ...card.position, rotation: rot } }}
-                              friends={friends}
-                              onClick={() => setActiveCard(card)}
-                              isFeatured={isFeatured}
-                              style={{ transform: `rotate(${rot}deg)` }}
-                            />
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Desktop: network layout */}
           <div
             ref={networkRef}
-            className="hidden sm:block relative overflow-hidden bg-[#F0EDE0] cursor-grab active:cursor-grabbing w-full"
+            className="relative overflow-hidden bg-[#F0EDE0] cursor-grab active:cursor-grabbing w-full touch-none"
             style={{ height: 'calc(100vh - 195px)' }}
           >
             <motion.div 

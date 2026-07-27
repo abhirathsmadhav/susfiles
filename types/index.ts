@@ -28,6 +28,7 @@ export interface Friend {
   tagline: string;        // short roasty one-liner
   createdAt: string;
   createdBy?: string;     // uid of the user who created this suspect
+  friendIds?: string[];   // connections to other friends
 }
 
 export interface CardPosition {
@@ -60,6 +61,7 @@ export interface Card {
   createdBy: string;
   spaceId?: string;        // ID of the private space this belongs to
   mediaAspectRatio?: 'original' | '1:1' | '4:3' | '16:9' | '9:16';
+  isClassified?: boolean;  // Blur/spoiler flag
 }
 
 export interface Space {
@@ -84,5 +86,16 @@ export interface SpaceInvitation {
   fromUid: string;
   toUid: string;
   status: 'pending' | 'accepted' | 'declined';
+  createdAt: string;
+}
+
+export interface AppNotification {
+  id: string;
+  toUid: string;
+  fromUid?: string;
+  type: 'tag' | 'reaction' | 'invite_accepted';
+  message: string;
+  cardId?: string; // If related to a card
+  read: boolean;
   createdAt: string;
 }

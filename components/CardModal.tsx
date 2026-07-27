@@ -3,6 +3,8 @@
 import { Card, Friend } from '@/types';
 import { useEffect, useRef } from 'react';
 import EmojiReactions from './EmojiReactions';
+import CassettePlayer from './CassettePlayer';
+import BrutalVideoPlayer from './BrutalVideoPlayer';
 import Link from 'next/link';
 import { getContrastColor } from './FriendNode';
 
@@ -92,25 +94,25 @@ export default function CardModal({ card, friends, onClose }: CardModalProps) {
           )}
 
           {card.type === 'video' && card.videoUrl && (
-            <div className="border-[3px] border-black overflow-hidden bg-black">
-              <video 
-                src={card.videoUrl} 
-                controls 
-                className={`w-full object-cover ${
+            <div className="w-full">
+              <BrutalVideoPlayer 
+                videoUrl={card.videoUrl} 
+                color={accent}
+                aspectRatioClass={
                   !card.mediaAspectRatio || card.mediaAspectRatio === '1:1' ? 'aspect-square' :
                   card.mediaAspectRatio === 'original' ? '' :
                   card.mediaAspectRatio === '4:3' ? 'aspect-[4/3]' :
                   card.mediaAspectRatio === '16:9' ? 'aspect-video' :
                   card.mediaAspectRatio === '9:16' ? 'aspect-[9/16]' : 'aspect-square'
-                }`} 
+                }
               />
             </div>
           )}
 
           {/* Audio */}
           {card.type === 'audio' && card.audioUrl && (
-            <div className="border-[3px] border-black bg-[#1A1A1A] p-4">
-              <audio src={card.audioUrl} controls className="w-full" />
+            <div className="w-full border-[3px] border-black">
+              <CassettePlayer audioUrl={card.audioUrl} title={card.title} color={accent} />
             </div>
           )}
 
@@ -168,7 +170,7 @@ export default function CardModal({ card, friends, onClose }: CardModalProps) {
             <p className="font-brutal text-xs uppercase tracking-wider mb-3 opacity-50">
               Vibe Check
             </p>
-            <EmojiReactions cardId={card.id} reactions={card.reactions} />
+            <EmojiReactions cardId={card.id} reactions={card.reactions} cardCreatorId={card.createdBy} />
           </div>
 
           {/* Bottom spacer for safe area */}

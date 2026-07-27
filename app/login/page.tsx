@@ -61,7 +61,14 @@ export default function LoginPage() {
       router.push('/');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Google login failed';
-      toast.error(msg.replace('Firebase: ', '').replace(/\(auth\/.*\)/, '').trim());
+      
+      if (msg.includes('popup-blocked') || msg.includes('network-request-failed') || msg.includes('internal-error')) {
+        toast.error('Login blocked! Please disable your adblocker or Brave Shields and try again. 🛑');
+      } else if (msg.includes('popup-closed-by-user')) {
+        toast.error('Login popup was closed. Please try again.');
+      } else {
+        toast.error(msg.replace('Firebase: ', '').replace(/\(auth\/.*\)/, '').trim());
+      }
     } finally {
       setGoogleLoading(false);
     }

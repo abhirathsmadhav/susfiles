@@ -10,7 +10,8 @@ import {
   where,
   orderBy,
   addDoc,
-  deleteDoc
+  deleteDoc,
+  getCountFromServer
 } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
 import { Friend, Card, UserProfile } from '@/types';
@@ -37,6 +38,9 @@ export default function FriendPage({ params }: Props) {
   const [notFound, setNotFound] = useState(false);
   const [isUser, setIsUser] = useState(false);
   const [currentUserUid, setCurrentUserUid] = useState<string | null>(null);
+
+  // Rap Sheet Stats
+  const [stats, setStats] = useState({ uploads: 0, tagged: 0 });
 
   // Friend Request State
   const [isFriend, setIsFriend] = useState(false);
@@ -111,10 +115,22 @@ export default function FriendPage({ params }: Props) {
           return;
         }
 
+        let uploadsCount = 0;
+        if (isRegisteredUser) {
+          try {
+            const uploadsQuery = query(collection(db, 'cards'), where('createdBy', '==', id));
+            const uploadsSnap = await getCountFromServer(uploadsQuery);
+            uploadsCount = uploadsSnap.data().count;
+          } catch (e) {
+            console.error('Failed to count uploads', e);
+          }
+        }
+
         setIsUser(isRegisteredUser);
         setFriend(friendData);
         setAllFriends(allFriendsSnap.docs.map((d) => ({ id: d.id, ...d.data() } as Friend)));
         setCards(cardsSnap.docs.map((d) => ({ id: d.id, ...d.data() } as Card)));
+        setStats({ uploads: uploadsCount, tagged: cardsSnap.docs.length });
       } catch (err) {
         console.error('Failed to load friend:', err);
         setNotFound(true);
@@ -297,6 +313,20 @@ export default function FriendPage({ params }: Props) {
                 </span>
               </div>
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Rap Sheet Stats */}
+      <div className="max-w-7xl mx-auto px-4 mt-6">
+        <div className="flex bg-black text-acid-yellow border-4 border-black divide-x-4 divide-black">
+          <div className="flex-1 p-3 text-center">
+            <div className="font-brutal text-2xl">{stats.uploads}</div>
+            <div className="font-brutal text-xs tracking-wider opacity-80">FILES UPLOADED</div>
+          </div>
+          <div className="flex-1 p-3 text-center">
+            <div className="font-brutal text-2xl">{stats.tagged}</div>
+            <div className="font-brutal text-xs tracking-wider opacity-80">TIMES TAGGED</div>
           </div>
         </div>
       </div>
