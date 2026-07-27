@@ -44,19 +44,48 @@ export default function UploadZone({ onUpload, currentUrl, acceptAudio = true }:
         finalUrl = url;
       } else {
         const fileObj = fileToUpload instanceof File ? fileToUpload : new File([fileToUpload], `file.${type === 'video' ? 'mp4' : 'mp3'}`, { type: fileToUpload.type || 'application/octet-stream' });
-        const fd = new FormData();
-        fd.append('file', fileObj);
-        
-        // Upload directly to kappa.lol bypassing Vercel limits
-        const res = await fetch('https://kappa.lol/api/upload', { 
-          method: 'POST', 
-          body: fd,
-          // kappa.lol supports CORS
-        });
-        
-        if (!res.ok) throw new Error('Media upload failed');
-        const data = await res.json();
-        finalUrl = data.link;
+        let uploadSuccess = false;
+
+        // Try kappa.lol up to 3 times
+        for (let attempt = 1; attempt <= 3; attempt++) {
+          try {
+            const fd = new FormData();
+            fd.append('file', fileObj);
+            const res = await fetch('https://kappa.lol/api/upload', { 
+              method: 'POST', 
+              body: fd
+            });
+            if (res.ok) {
+              const data = await res.json();
+              finalUrl = data.link;
+              uploadSuccess = true;
+              break;
+            }
+          } catch (e) {
+            console.warn(`kappa.lol attempt ${attempt} failed`);
+          }
+          if (!uploadSuccess && attempt < 3) {
+            await new Promise(r => setTimeout(r, 1000 * attempt));
+          }
+        }
+
+        // Fallback to catbox.moe API route
+        if (!uploadSuccess) {
+          try {
+            const fd = new FormData();
+            fd.append('file', fileObj);
+            const res = await fetch('/api/upload-media', { method: 'POST', body: fd });
+            if (res.ok) {
+              const data = await res.json();
+              finalUrl = data.url;
+              uploadSuccess = true;
+            }
+          } catch (e) {
+            console.error('catbox fallback failed', e);
+          }
+        }
+
+        if (!uploadSuccess) throw new Error('Media upload failed');
       }
 
       clearInterval(progressInterval);

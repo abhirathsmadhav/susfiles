@@ -11,7 +11,9 @@ import {
   orderBy,
   addDoc,
   deleteDoc,
-  getCountFromServer
+  getCountFromServer,
+  limit,
+  startAfter
 } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
 import { Friend, Card, UserProfile } from '@/types';
@@ -47,6 +49,9 @@ export default function FriendPage({ params }: Props) {
   const [requestSent, setRequestSent] = useState(false);
   const [requestId, setRequestId] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
+  
+  const [lastVisible, setLastVisible] = useState<any>(null);
+  const [hasMore, setHasMore] = useState(true);
 
   useEffect(() => {
     const unsub = auth.onAuthStateChanged((u) => setCurrentUserUid(u?.uid || null));
@@ -63,7 +68,8 @@ export default function FriendPage({ params }: Props) {
             query(
               collection(db, 'cards'),
               where('linkedFriendIds', 'array-contains', id),
-              orderBy('createdAt', 'desc')
+              orderBy('createdAt', 'desc'),
+              limit(30)
             )
           ),
         ]);
@@ -131,6 +137,8 @@ export default function FriendPage({ params }: Props) {
         setAllFriends(allFriendsSnap.docs.map((d) => ({ id: d.id, ...d.data() } as Friend)));
         setCards(cardsSnap.docs.map((d) => ({ id: d.id, ...d.data() } as Card)));
         setStats({ uploads: uploadsCount, tagged: cardsSnap.docs.length });
+        setLastVisible(cardsSnap.docs[cardsSnap.docs.length - 1]);
+        if (cardsSnap.docs.length < 30) setHasMore(false);
       } catch (err) {
         console.error('Failed to load friend:', err);
         setNotFound(true);
@@ -144,6 +152,25 @@ export default function FriendPage({ params }: Props) {
     }
   }, [id, currentUserProfile, authUser]);
 
+  const loadMore = async () => {
+    if (!lastVisible || !hasMore) return;
+    try {
+      const q = query(
+        collection(db, 'cards'),
+        where('linkedFriendIds', 'array-contains', id),
+        orderBy('createdAt', 'desc'),
+        startAfter(lastVisible),
+        limit(30)
+      );
+      const snap = await getDocs(q);
+      setLastVisible(snap.docs[snap.docs.length - 1]);
+      if (snap.docs.length < 30) setHasMore(false);
+      setCards(prev => [...prev, ...snap.docs.map((d) => ({ id: d.id, ...d.data() } as Card))]);
+    } catch (e) {
+      console.error('Failed to load more friend cards', e);
+    }
+  };
+
   const handleSendRequest = async () => {
     if (!currentUserProfile || !authUser) return;
     if (authUser.isAnonymous) {
@@ -156,7 +183,10 @@ export default function FriendPage({ params }: Props) {
         from: authUser.uid,
         to: id,
         status: 'pending',
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        fromName: currentUserProfile.displayName,
+        fromAvatar: currentUserProfile.avatarUrl || '',
+        fromUsername: currentUserProfile.username || ''
       });
       setRequestSent(true);
       setRequestId(docRef.id);
@@ -342,7 +372,7 @@ export default function FriendPage({ params }: Props) {
             <p className="text-sm opacity-60 mt-2">Nothing on file. Yet.</p>
           </div>
         ) : (
-          <WallCanvas cards={cards} friends={allFriends} />
+          <WallCanvas cards={cards} friends={allFriends} onLoadMore={loadMore} hasMore={hasMore} />
         )}
       </main>
     </div>

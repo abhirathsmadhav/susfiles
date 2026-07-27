@@ -79,13 +79,21 @@ export default function ProfilePage() {
   useEffect(() => {
     if (!user) return;
     const q = query(collection(db, 'friendRequests'), where('to', '==', user.uid), where('status', '==', 'pending'));
-    const unsub = onSnapshot(q, async (snap) => {
-      const reqs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      const populated = await Promise.all(reqs.map(async (req: any) => {
-        const uSnap = await getDoc(doc(db, 'users', req.from));
-        return { ...req, user: uSnap.data() };
-      }));
-      setRequests(populated);
+    const unsub = onSnapshot(q, (snap) => {
+      const reqs = snap.docs.map(d => {
+        const data = d.data();
+        return {
+          id: d.id,
+          ...data,
+          user: {
+            displayName: data.fromName || 'Unknown User',
+            username: data.fromUsername || '',
+            avatarUrl: data.fromAvatar || '',
+            signatureColor: '#000000' // fallback if not included
+          }
+        };
+      });
+      setRequests(reqs);
     });
 
     // Listen to space invitations

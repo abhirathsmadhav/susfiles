@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { collection, getDocs, orderBy, query } from 'firebase/firestore';
+import { collection, getDocs, orderBy, query, limit, startAfter } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Card, Friend } from '@/types';
 import Nav from '@/components/Nav';
@@ -15,6 +15,8 @@ export default function HomePage() {
   const { user, loading: authLoading, loginAsGuest } = useAuth();
   const [friends, setFriends] = useState<Friend[]>([]);
   const [cards, setCards] = useState<Card[]>([]);
+  const [lastVisible, setLastVisible] = useState<any>(null);
+  const [hasMore, setHasMore] = useState(true);
   const [dataLoading, setDataLoading] = useState(true);
   const router = useRouter();
 
@@ -29,7 +31,7 @@ export default function HomePage() {
       try {
         const [friendsSnap, cardsSnap, usersSnap] = await Promise.all([
           getDocs(query(collection(db, 'friends'), orderBy('createdAt', 'asc'))),
-          getDocs(query(collection(db, 'cards'), orderBy('createdAt', 'desc'))),
+          getDocs(query(collection(db, 'cards'), orderBy('createdAt', 'desc'), limit(30))),
           getDocs(collection(db, 'users')),
         ]);
 
@@ -55,6 +57,8 @@ export default function HomePage() {
 
         setFriends([...mappedUsers, ...mappedFriends]);
         setCards(cardsSnap.docs.map((d) => ({ id: d.id, ...d.data() } as Card)).filter(c => !c.spaceId));
+        setLastVisible(cardsSnap.docs[cardsSnap.docs.length - 1]);
+        if (cardsSnap.docs.length < 30) setHasMore(false);
       } catch (err) {
         console.error('Failed to load data:', err);
       } finally {
@@ -63,6 +67,20 @@ export default function HomePage() {
     }
     load();
   }, [user]);
+
+  const loadMore = async () => {
+    if (!lastVisible || !hasMore) return;
+    try {
+      const q = query(collection(db, 'cards'), orderBy('createdAt', 'desc'), startAfter(lastVisible), limit(30));
+      const snap = await getDocs(q);
+      setLastVisible(snap.docs[snap.docs.length - 1]);
+      if (snap.docs.length < 30) setHasMore(false);
+      
+      setCards(prev => [...prev, ...snap.docs.map((d) => ({ id: d.id, ...d.data() } as Card)).filter(c => !c.spaceId)]);
+    } catch (e) {
+      console.error('Failed to load more cards', e);
+    }
+  };
 
   const handleGuestLogin = async () => {
     try {
@@ -224,7 +242,7 @@ export default function HomePage() {
             <p className="font-mono text-sm opacity-60">The admin needs to add some sus content first.</p>
           </div>
         ) : (
-          <WallCanvas cards={cards} friends={friends} />
+          <WallCanvas cards={cards} friends={friends} onLoadMore={loadMore} hasMore={hasMore} />
         )}
       </main>
     </div>

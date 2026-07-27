@@ -17,6 +17,8 @@ import { motion } from 'framer-motion';
 interface WallCanvasProps {
   cards: CardType[];
   friends: Friend[];
+  onLoadMore?: () => void;
+  hasMore?: boolean;
 }
 
 // Generate a deterministic-ish random rotation for a card
@@ -144,7 +146,7 @@ function getNetworkLayout(cards: CardType[], friends: Friend[]): NetworkLayout {
   return result;
 }
 
-export default function WallCanvas({ cards, friends }: WallCanvasProps) {
+export default function WallCanvas({ cards, friends, onLoadMore, hasMore }: WallCanvasProps) {
   const [mode, setMode] = useState<'scatter' | 'network' | 'masonry'>('masonry');
   const [shuffleSeed, setShuffleSeed] = useState(42);
   const [selectedFriend, setSelectedFriend] = useState<string | null>(null);
@@ -156,8 +158,23 @@ export default function WallCanvas({ cards, friends }: WallCanvasProps) {
   const { user } = useAuth();
   const scatterRef = useRef<HTMLDivElement>(null);
   const networkRef = useRef<HTMLDivElement>(null);
+  const observerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => setMounted(true), []);
+
+  useEffect(() => {
+    if (mode !== 'masonry' || !hasMore || !onLoadMore) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          onLoadMore();
+        }
+      },
+      { rootMargin: '200px' }
+    );
+    if (observerRef.current) observer.observe(observerRef.current);
+    return () => observer.disconnect();
+  }, [mode, hasMore, onLoadMore]);
 
   const handleDragEnd = async (cardId: string, newX: number, newY: number) => {
     if (!user) return;
@@ -364,6 +381,13 @@ export default function WallCanvas({ cards, friends }: WallCanvasProps) {
               );
             })}
           </motion.div>
+          {hasMore && onLoadMore && (
+            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-[50]">
+              <button onClick={onLoadMore} className="btn-brutal bg-acid-yellow">
+                LOAD MORE CHAOS
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -413,6 +437,13 @@ export default function WallCanvas({ cards, friends }: WallCanvasProps) {
                 />
               ))}
             </motion.div>
+            {hasMore && onLoadMore && (
+              <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-[50]">
+                <button onClick={onLoadMore} className="btn-brutal bg-acid-yellow">
+                  LOAD MORE CHAOS
+                </button>
+              </div>
+            )}
           </div>
         </>
       )}
@@ -436,6 +467,11 @@ export default function WallCanvas({ cards, friends }: WallCanvasProps) {
             </div>
           ))}
         </Masonry>
+          {hasMore && onLoadMore && (
+            <div ref={observerRef} className="py-12 flex justify-center w-full">
+              <div className="font-brutal text-lg animate-pulse">LOADING MORE...</div>
+            </div>
+          )}
         </div>
       )}
 

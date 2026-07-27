@@ -17,34 +17,61 @@ service cloud.firestore {
     // Users collection
     // ========================
     match /users/{uid} {
-      // Users can read their own doc, and others can read to see profiles.
-      // We allow write if authenticated to support adding friendIds without a backend.
-      allow read, write: if isAuthenticated();
+      allow read: if isAuthenticated();
+      // Allow users to update their own profile, OR allow others to ONLY update friendIds
+      allow update: if isAuthenticated() && (
+        request.auth.uid == uid || 
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['friendIds'])
+      );
+      allow create: if isAuthenticated() && request.auth.uid == uid;
+      allow delete: if isAuthenticated() && request.auth.uid == uid;
     }
 
     // ========================
-    // Friends collection
+    // Friends collection (Dummy suspects created by users)
     // ========================
     match /friends/{friendId} {
-      allow read, write: if isAuthenticated();
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && request.resource.data.createdBy == request.auth.uid;
+      allow update, delete: if isAuthenticated() && resource.data.createdBy == request.auth.uid;
     }
 
     // ========================
     // Cards collection
     // ========================
     match /cards/{cardId} {
-      allow read, write: if isAuthenticated();
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && request.resource.data.createdBy == request.auth.uid;
+      allow delete: if isAuthenticated() && resource.data.createdBy == request.auth.uid;
+      // Allow the creator to update anything. Allow others to ONLY update reactions or positions (for Scatter view).
+      allow update: if isAuthenticated() && (
+        resource.data.createdBy == request.auth.uid || 
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions', 'position'])
+      );
     }
     
+    // ========================
+    // Friend Requests collection
+    // ========================
     match /friendRequests/{requestId} {
-      allow read, write: if isAuthenticated();
+      // Can read if you are sender or receiver
+      allow read: if isAuthenticated() && (resource.data.from == request.auth.uid || resource.data.to == request.auth.uid);
+      allow create: if isAuthenticated() && request.resource.data.from == request.auth.uid;
+      // Can delete if you sent it (cancel) or if you received it (accept/decline)
+      allow delete: if isAuthenticated() && (resource.data.from == request.auth.uid || resource.data.to == request.auth.uid);
+      allow update: if false; // Requests should be deleted, not updated.
     }
 
     // ========================
     // Spaces collection
     // ========================
     match /spaces/{spaceId} {
-      allow read, create, update: if isAuthenticated();
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && request.resource.data.adminId == request.auth.uid;
+      allow update: if isAuthenticated() && (
+        resource.data.adminId == request.auth.uid ||
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberIds'])
+      );
       // Only the admin of the space can delete it
       allow delete: if isAuthenticated() && resource.data.adminId == request.auth.uid;
     }
@@ -53,7 +80,10 @@ service cloud.firestore {
     // Space Invitations collection
     // ========================
     match /spaceInvitations/{invitationId} {
-      allow read, write: if isAuthenticated();
+      allow read: if isAuthenticated() && (resource.data.toUid == request.auth.uid || resource.data.fromUid == request.auth.uid);
+      allow create: if isAuthenticated() && request.resource.data.fromUid == request.auth.uid;
+      allow update: if isAuthenticated() && resource.data.toUid == request.auth.uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']);
+      allow delete: if isAuthenticated() && (resource.data.toUid == request.auth.uid || resource.data.fromUid == request.auth.uid);
     }
 
     // ========================
@@ -71,7 +101,10 @@ service cloud.firestore {
     // Notifications collection
     // ========================
     match /notifications/{notificationId} {
-      allow read, write: if isAuthenticated();
+      allow read: if isAuthenticated() && resource.data.toUid == request.auth.uid;
+      allow create: if isAuthenticated(); // Anyone can trigger a notification
+      allow update: if isAuthenticated() && resource.data.toUid == request.auth.uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+      allow delete: if isAuthenticated() && resource.data.toUid == request.auth.uid;
     }
   }
 }

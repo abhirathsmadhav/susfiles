@@ -7,6 +7,7 @@ import CassettePlayer from './CassettePlayer';
 import BrutalVideoPlayer from './BrutalVideoPlayer';
 import Link from 'next/link';
 import { getContrastColor } from './FriendNode';
+import { RemoveScroll } from 'react-remove-scroll';
 
 interface CardModalProps {
   card: Card;
@@ -30,11 +31,8 @@ export default function CardModal({ card, friends, onClose }: CardModalProps) {
       if (e.key === 'Escape') onClose();
     };
     window.addEventListener('keydown', handleKey);
-    // Prevent body scroll when modal is open
-    document.body.style.overflow = 'hidden';
     return () => {
       window.removeEventListener('keydown', handleKey);
-      document.body.style.overflow = '';
     };
   }, [onClose]);
 
@@ -43,8 +41,9 @@ export default function CardModal({ card, friends, onClose }: CardModalProps) {
   };
 
   return (
-    <div className="modal-overlay" onClick={handleBackdropClick}>
-      <div
+    <RemoveScroll>
+      <div className="modal-overlay" onClick={handleBackdropClick}>
+        <div
         className="bottom-sheet sm:relative sm:w-full sm:max-w-lg sm:animate-slide-up w-full flex flex-col"
         style={{ '--accent': accent } as React.CSSProperties}
         onClick={(e) => e.stopPropagation()}
@@ -178,5 +177,6 @@ export default function CardModal({ card, friends, onClose }: CardModalProps) {
         </div>
       </div>
     </div>
+    </RemoveScroll>
   );
 }
