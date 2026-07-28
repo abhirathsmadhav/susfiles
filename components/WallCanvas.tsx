@@ -12,7 +12,7 @@ import CardModal from './CardModal';
 import FilterBar from './FilterBar';
 import FriendNode from './FriendNode';
 import SVGConnectors from './SVGConnectors';
-import { motion } from 'framer-motion';
+import { motion, useMotionValue } from 'framer-motion';
 
 interface WallCanvasProps {
   cards: CardType[];
@@ -159,6 +159,62 @@ export default function WallCanvas({ cards, friends, onLoadMore, hasMore }: Wall
   const scatterRef = useRef<HTMLDivElement>(null);
   const networkRef = useRef<HTMLDivElement>(null);
   const observerRef = useRef<HTMLDivElement>(null);
+
+  const scale = useMotionValue(1);
+
+  useEffect(() => {
+    scale.set(1);
+  }, [mode, scale]);
+
+  useEffect(() => {
+    const scatterEl = scatterRef.current;
+    const networkEl = networkRef.current;
+    
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const zoomFactor = e.ctrlKey ? 0.01 : 0.001;
+      let newScale = scale.get() - e.deltaY * zoomFactor;
+      newScale = Math.min(Math.max(newScale, 0.1), 1);
+      scale.set(newScale);
+    };
+
+    if (scatterEl) scatterEl.addEventListener('wheel', handleWheel, { passive: false });
+    if (networkEl) networkEl.addEventListener('wheel', handleWheel, { passive: false });
+    
+    return () => {
+      if (scatterEl) scatterEl.removeEventListener('wheel', handleWheel);
+      if (networkEl) networkEl.removeEventListener('wheel', handleWheel);
+    };
+  }, [mode, scale]);
+
+  const touchStartRef = useRef<{ dist: number; startScale: number } | null>(null);
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    if (e.touches.length === 2) {
+      const dist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      touchStartRef.current = { dist, startScale: scale.get() };
+    }
+  }, [scale]);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (e.touches.length === 2 && touchStartRef.current) {
+      const dist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      const ratio = dist / touchStartRef.current.dist;
+      let newScale = touchStartRef.current.startScale * ratio;
+      newScale = Math.min(Math.max(newScale, 0.1), 1);
+      scale.set(newScale);
+    }
+  }, [scale]);
+
+  const handleTouchEnd = useCallback(() => {
+    touchStartRef.current = null;
+  }, []);
 
   useEffect(() => setMounted(true), []);
 
@@ -326,12 +382,16 @@ export default function WallCanvas({ cards, friends, onLoadMore, hasMore }: Wall
           ref={scatterRef}
           className="relative overflow-hidden bg-[#F0EDE0] cursor-grab active:cursor-grabbing w-full touch-none"
           style={{ height: 'calc(100vh - 195px)' }}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
         >
           <motion.div
             drag
             dragConstraints={scatterRef}
             dragElastic={0.1}
             style={{ 
+              scale,
               position: 'absolute', 
               width: 4000, 
               height: 4000,
@@ -400,12 +460,16 @@ export default function WallCanvas({ cards, friends, onLoadMore, hasMore }: Wall
             ref={networkRef}
             className="relative overflow-hidden bg-[#F0EDE0] cursor-grab active:cursor-grabbing w-full touch-none"
             style={{ height: 'calc(100vh - 195px)' }}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
           >
             <motion.div 
               drag
               dragConstraints={networkRef}
               dragElastic={0.1}
               style={{ 
+                scale,
                 position: 'absolute', 
                 width: networkLayout.totalWidth, 
                 height: networkLayout.totalHeight,
