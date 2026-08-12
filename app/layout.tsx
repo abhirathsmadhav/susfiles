@@ -3,6 +3,7 @@ import './globals.css';
 import { AuthProvider } from '@/lib/auth-context';
 import { Toaster } from 'react-hot-toast';
 import { ThemeProvider } from 'next-themes';
+import AppShell from '@/components/AppShell';
 
 export const metadata: Metadata = {
   title: 'The Sus Files',
@@ -47,7 +48,9 @@ export default function RootLayout({
       <body className="min-h-screen bg-off-white dark:bg-brutal-black text-brutal-black dark:text-off-white transition-colors duration-200 overflow-x-hidden">
         <ThemeProvider attribute="class" forcedTheme="light">
           <AuthProvider>
-            {children}
+            <AppShell>
+              {children}
+            </AppShell>
             <Toaster
               position="top-center"
               toastOptions={{

@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
+import SusFilesLoader from './SusFilesLoader';
 
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -19,10 +20,8 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-brutal-black flex items-center justify-center">
-        <div className="font-brutal text-acid-yellow text-2xl animate-pulse">
-          CHECKING CREDENTIALS...
-        </div>
+      <div className="min-h-screen bg-brutal-black flex flex-col items-center justify-center gap-4">
+        <SusFilesLoader />
       </div>
     );
   }
