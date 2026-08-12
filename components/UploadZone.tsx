@@ -3,7 +3,7 @@
 import { useState, useCallback, useRef } from 'react';
 import toast from 'react-hot-toast';
 import ImageCropper from './ImageCropper';
-import { uploadImage } from '@/lib/imgbb';
+
 import { FolderUp, Music, X, Maximize, Square, Monitor, MonitorPlay, Smartphone } from 'lucide-react';
 
 interface UploadZoneProps {
@@ -32,83 +32,51 @@ export default function UploadZone({ onUpload, currentUrl, acceptAudio = true }:
   const performUpload = async (fileToUpload: File | Blob, type: 'image' | 'audio' | 'video', selectedRatio?: 'original' | '1:1' | '4:3' | '16:9' | '9:16') => {
     setFileType(type);
     setUploading(true);
-    setProgress(30);
+    setProgress(0);
 
     try {
-      const progressInterval = setInterval(() => setProgress((p) => Math.min(p + 10, 85)), 200);
-      let finalUrl = '';
+      const { storage, auth } = await import('@/lib/firebase');
+      const { ref, uploadBytesResumable, getDownloadURL } = await import('firebase/storage');
 
-      if (type === 'image') {
-        const fileObj = fileToUpload instanceof File ? fileToUpload : new File([fileToUpload], 'cropped.jpg', { type: 'image/jpeg' });
-        const { url } = await uploadImage(fileObj);
-        finalUrl = url;
-      } else {
-        const fileObj = fileToUpload instanceof File ? fileToUpload : new File([fileToUpload], `file.${type === 'video' ? 'mp4' : 'mp3'}`, { type: fileToUpload.type || 'application/octet-stream' });
-        let uploadSuccess = false;
-
-        // Try kappa.lol up to 3 times
-        for (let attempt = 1; attempt <= 3; attempt++) {
-          try {
-            const fd = new FormData();
-            fd.append('file', fileObj);
-            const res = await fetch('https://kappa.lol/api/upload', { 
-              method: 'POST', 
-              body: fd
-            });
-            if (res.ok) {
-              const data = await res.json();
-              finalUrl = data.link;
-              uploadSuccess = true;
-              break;
-            }
-          } catch (e) {
-            console.warn(`kappa.lol attempt ${attempt} failed`);
-          }
-          if (!uploadSuccess && attempt < 3) {
-            await new Promise(r => setTimeout(r, 1000 * attempt));
-          }
-        }
-
-        // Fallback to catbox.moe API route
-        if (!uploadSuccess) {
-          try {
-            const fd = new FormData();
-            fd.append('file', fileObj);
-            
-            let token = '';
-            const { auth } = await import('@/lib/firebase');
-            if (auth.currentUser) {
-              token = await auth.currentUser.getIdToken();
-            }
-            
-            const res = await fetch('/api/upload-media', { 
-              method: 'POST', 
-              headers: {
-                ...(token ? { Authorization: `Bearer ${token}` } : {}),
-              },
-              body: fd 
-            });
-            if (res.ok) {
-              const data = await res.json();
-              finalUrl = data.url;
-              uploadSuccess = true;
-            }
-          } catch (e) {
-            console.error('catbox fallback failed', e);
-          }
-        }
-
-        if (!uploadSuccess) throw new Error('Media upload failed');
+      if (!auth.currentUser) {
+        throw new Error('You must be logged in to upload files.');
       }
 
-      clearInterval(progressInterval);
-      setProgress(100);
+      const uid = auth.currentUser.uid;
+      const fileExt = type === 'image' ? 'jpg' : type === 'video' ? 'mp4' : 'mp3';
+      const fileObj = fileToUpload instanceof File ? fileToUpload : new File([fileToUpload], `upload.${fileExt}`, { type: fileToUpload.type || 'application/octet-stream' });
+      const uniqueName = `${Date.now()}_${Math.random().toString(36).substring(2, 9)}.${fileExt}`;
+      const storageRef = ref(storage, `users/${uid}/${uniqueName}`);
+
+      const uploadTask = uploadBytesResumable(storageRef, fileObj);
+
+      const finalUrl = await new Promise<string>((resolve, reject) => {
+        uploadTask.on(
+          'state_changed',
+          (snapshot) => {
+            const currentProgress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+            setProgress(Math.round(currentProgress));
+          },
+          (error) => {
+            reject(error);
+          },
+          async () => {
+            try {
+              const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+              resolve(downloadURL);
+            } catch (err) {
+              reject(err);
+            }
+          }
+        );
+      });
+
       setPreview(finalUrl);
       onUpload(finalUrl, selectedRatio);
-      toast.success(`${type === 'video' ? 'Video' : type === 'audio' ? 'Audio' : 'Image'} uploaded! 🔥`);
-    } catch (err) {
+      toast.success(`${type === 'video' ? 'Video' : type === 'audio' ? 'Audio' : 'Image'} uploaded securely! 🔥`);
+    } catch (err: any) {
       console.error(err);
-      toast.error('Upload failed. Try again.');
+      toast.error(err.message || 'Upload failed. Try again.');
       setPreview('');
       setProgress(0);
     } finally {
