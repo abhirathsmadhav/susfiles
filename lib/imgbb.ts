@@ -3,6 +3,8 @@
 // To swap providers, only this file needs to change.
 // ============================================================
 
+import { auth } from '@/lib/firebase';
+
 export interface UploadResult {
   url: string;
   deleteUrl?: string;
@@ -16,8 +18,16 @@ export async function uploadImage(file: File): Promise<UploadResult> {
   const formData = new FormData();
   formData.append('image', file);
 
+  let token = '';
+  if (auth.currentUser) {
+    token = await auth.currentUser.getIdToken();
+  }
+
   const res = await fetch('/api/upload', {
     method: 'POST',
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
     body: formData,
   });
 

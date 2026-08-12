@@ -26,7 +26,6 @@ export default function LoginPage() {
         toast.success('Account created! Welcome to the Files. 🕵️');
       } else {
         await login(form.email, form.password);
-        document.cookie = 'sus-session=1; path=/; max-age=86400';
         toast.success('Logged in!');
       }
       router.push('/');
@@ -56,7 +55,6 @@ export default function LoginPage() {
     setGoogleLoading(true);
     try {
       await loginWithGoogle();
-      document.cookie = 'sus-session=1; path=/; max-age=86400';
       toast.success('Logged in with Google! 🚀');
       router.push('/');
     } catch (err: unknown) {

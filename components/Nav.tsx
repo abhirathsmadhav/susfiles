@@ -28,7 +28,6 @@ export default function Nav() {
 
   const handleLogout = async () => {
     await logout();
-    document.cookie = 'sus-session=; Max-Age=0; path=/';
     toast.success('Logged out!');
     router.push('/');
   };

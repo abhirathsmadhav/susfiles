@@ -1,5 +1,7 @@
 {
   "projects": {
     "default": "sus-files-app"
-  }
+  },
+  "targets": {},
+  "etags": {}
 }

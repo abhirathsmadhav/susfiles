@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { adminAuth } from '@/lib/firebase-admin';
 
 const IMGBB_API_KEY = process.env.IMGBB_API_KEY;
 const IMGBB_URL = 'https://api.imgbb.com/1/upload';
@@ -10,6 +11,26 @@ export async function POST(req: NextRequest) {
       { status: 500 }
     );
   }
+
+  // --- Authentication Check ---
+  const authHeader = req.headers.get('Authorization');
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return NextResponse.json({ error: 'Unauthorized: Missing or invalid token' }, { status: 401 });
+  }
+
+  const token = authHeader.split('Bearer ')[1];
+  try {
+    const decodedToken = await adminAuth.verifyIdToken(token);
+    
+    // Restrict guests from uploading
+    if (decodedToken.firebase.sign_in_provider === 'anonymous') {
+      return NextResponse.json({ error: 'Forbidden: Guests cannot upload files.' }, { status: 403 });
+    }
+  } catch (error) {
+    console.error('Token verification failed:', error);
+    return NextResponse.json({ error: 'Unauthorized: Invalid token' }, { status: 401 });
+  }
+  // --------------------------
 
   try {
     const formData = await req.formData();

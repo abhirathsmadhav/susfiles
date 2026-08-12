@@ -103,8 +103,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loginAsGuest = async () => {
     await signInAnonymously(auth);
-    // Set session cookie so middleware allows access
-    document.cookie = 'sus-session=1; path=/; max-age=86400';
   };
 
   const resetPassword = async (email: string) => {
@@ -114,7 +112,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = async () => {
     await signOut(auth);
     setProfile(null);
-    document.cookie = 'sus-session=; Max-Age=0; path=/';
   };
 
   return (

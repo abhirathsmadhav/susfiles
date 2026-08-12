@@ -1,8 +1,7 @@
 // ============================================================
 // The Sus Files — Firestore Security Rules
 // ============================================================
-// Paste these into Firebase Console > Firestore > Rules tab
-// ============================================================
+// Secure Version
 
 rules_version = '2';
 service cloud.firestore {
@@ -13,15 +12,34 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    // Helper: check if the user is a registered user (not anonymous)
+    function isRegisteredUser() {
+      return isAuthenticated() && request.auth.token.firebase.sign_in_provider != 'anonymous';
+    }
+
+    // Helper: check if the user is only modifying themselves in an array field
+    function isModifyingSelfInArray(field) {
+      let oldArray = resource.data.get(field, []);
+      let newArray = request.resource.data.get(field, []);
+      
+      // They added exactly one element, which is their own UID
+      let isAdding = newArray.size() == oldArray.size() + 1 && newArray.hasAll(oldArray) && request.auth.uid in newArray;
+      
+      // They removed exactly one element, which is their own UID
+      let isRemoving = oldArray.size() == newArray.size() + 1 && oldArray.hasAll(newArray) && !(request.auth.uid in newArray);
+      
+      return isAdding || isRemoving;
+    }
+
     // ========================
     // Users collection
     // ========================
     match /users/{uid} {
       allow read: if isAuthenticated();
-      // Allow users to update their own profile, OR allow others to ONLY update friendIds
+      // Allow users to update their own profile, OR allow others to ONLY add/remove themselves from friendIds
       allow update: if isAuthenticated() && (
         request.auth.uid == uid || 
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['friendIds'])
+        isModifyingSelfInArray('friendIds')
       );
       allow create: if isAuthenticated() && request.auth.uid == uid;
       allow delete: if isAuthenticated() && request.auth.uid == uid;
@@ -32,8 +50,9 @@ service cloud.firestore {
     // ========================
     match /friends/{friendId} {
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && request.resource.data.createdBy == request.auth.uid;
-      allow update, delete: if isAuthenticated() && resource.data.createdBy == request.auth.uid;
+      // Only registered users can create suspects
+      allow create: if isRegisteredUser() && request.resource.data.createdBy == request.auth.uid;
+      allow update, delete: if isRegisteredUser() && resource.data.createdBy == request.auth.uid;
     }
 
     // ========================
@@ -41,9 +60,11 @@ service cloud.firestore {
     // ========================
     match /cards/{cardId} {
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && request.resource.data.createdBy == request.auth.uid;
+      // Only registered users can create cards
+      allow create: if isRegisteredUser() && request.resource.data.createdBy == request.auth.uid;
       allow delete: if isAuthenticated() && resource.data.createdBy == request.auth.uid;
       // Allow the creator to update anything. Allow others to ONLY update reactions or positions (for Scatter view).
+      // Note: Full security on `reactions` array is complex, but we allow position updates for the whiteboard feel.
       allow update: if isAuthenticated() && (
         resource.data.createdBy == request.auth.uid || 
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions', 'position'])
@@ -56,7 +77,7 @@ service cloud.firestore {
     match /friendRequests/{requestId} {
       // Can read if you are sender or receiver
       allow read: if isAuthenticated() && (resource.data.from == request.auth.uid || resource.data.to == request.auth.uid);
-      allow create: if isAuthenticated() && request.resource.data.from == request.auth.uid;
+      allow create: if isRegisteredUser() && request.resource.data.from == request.auth.uid;
       // Can delete if you sent it (cancel) or if you received it (accept/decline)
       allow delete: if isAuthenticated() && (resource.data.from == request.auth.uid || resource.data.to == request.auth.uid);
       allow update: if false; // Requests should be deleted, not updated.
@@ -67,10 +88,11 @@ service cloud.firestore {
     // ========================
     match /spaces/{spaceId} {
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && request.resource.data.adminId == request.auth.uid;
+      allow create: if isRegisteredUser() && request.resource.data.adminId == request.auth.uid;
+      // Users can modify spaces if they are admin, OR they are only adding/removing themselves from memberIds
       allow update: if isAuthenticated() && (
         resource.data.adminId == request.auth.uid ||
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberIds'])
+        isModifyingSelfInArray('memberIds')
       );
       // Only the admin of the space can delete it
       allow delete: if isAuthenticated() && resource.data.adminId == request.auth.uid;
@@ -81,7 +103,7 @@ service cloud.firestore {
     // ========================
     match /spaceInvitations/{invitationId} {
       allow read: if isAuthenticated() && (resource.data.toUid == request.auth.uid || resource.data.fromUid == request.auth.uid);
-      allow create: if isAuthenticated() && request.resource.data.fromUid == request.auth.uid;
+      allow create: if isRegisteredUser() && request.resource.data.fromUid == request.auth.uid;
       allow update: if isAuthenticated() && resource.data.toUid == request.auth.uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']);
       allow delete: if isAuthenticated() && (resource.data.toUid == request.auth.uid || resource.data.fromUid == request.auth.uid);
     }
@@ -92,8 +114,8 @@ service cloud.firestore {
     match /usernames/{username} {
       allow read: if isAuthenticated();
       // Only allow creating or updating if claiming for yourself
-      allow create: if isAuthenticated() && request.resource.data.uid == request.auth.uid;
-      allow update: if isAuthenticated() && request.resource.data.uid == request.auth.uid && resource.data.uid == request.auth.uid;
+      allow create: if isRegisteredUser() && request.resource.data.uid == request.auth.uid;
+      allow update: if isRegisteredUser() && request.resource.data.uid == request.auth.uid && resource.data.uid == request.auth.uid;
       allow delete: if isAuthenticated() && resource.data.uid == request.auth.uid;
     }
 
@@ -102,7 +124,8 @@ service cloud.firestore {
     // ========================
     match /notifications/{notificationId} {
       allow read: if isAuthenticated() && resource.data.toUid == request.auth.uid;
-      allow create: if isAuthenticated(); // Anyone can trigger a notification
+      // Ensure the 'fromUid' matches the sender to prevent spoofing
+      allow create: if isAuthenticated() && request.resource.data.fromUid == request.auth.uid; 
       allow update: if isAuthenticated() && resource.data.toUid == request.auth.uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
       allow delete: if isAuthenticated() && resource.data.toUid == request.auth.uid;
     }

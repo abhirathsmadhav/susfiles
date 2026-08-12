@@ -74,7 +74,20 @@ export default function UploadZone({ onUpload, currentUrl, acceptAudio = true }:
           try {
             const fd = new FormData();
             fd.append('file', fileObj);
-            const res = await fetch('/api/upload-media', { method: 'POST', body: fd });
+            
+            let token = '';
+            const { auth } = await import('@/lib/firebase');
+            if (auth.currentUser) {
+              token = await auth.currentUser.getIdToken();
+            }
+            
+            const res = await fetch('/api/upload-media', { 
+              method: 'POST', 
+              headers: {
+                ...(token ? { Authorization: `Bearer ${token}` } : {}),
+              },
+              body: fd 
+            });
             if (res.ok) {
               const data = await res.json();
               finalUrl = data.url;

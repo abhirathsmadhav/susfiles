@@ -1,8 +1,29 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { adminAuth } from '@/lib/firebase-admin';
 
-export async function POST(request: Request) {
+export async function POST(req: NextRequest) {
+  // --- Authentication Check ---
+  const authHeader = req.headers.get('Authorization');
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return NextResponse.json({ error: 'Unauthorized: Missing or invalid token' }, { status: 401 });
+  }
+
+  const token = authHeader.split('Bearer ')[1];
   try {
-    const formData = await request.formData();
+    const decodedToken = await adminAuth.verifyIdToken(token);
+    
+    // Restrict guests from uploading
+    if (decodedToken.firebase.sign_in_provider === 'anonymous') {
+      return NextResponse.json({ error: 'Forbidden: Guests cannot upload files.' }, { status: 403 });
+    }
+  } catch (error) {
+    console.error('Token verification failed:', error);
+    return NextResponse.json({ error: 'Unauthorized: Invalid token' }, { status: 401 });
+  }
+  // --------------------------
+
+  try {
+    const formData = await req.formData();
     const file = formData.get('file') as File;
 
     if (!file || typeof file === 'string') {

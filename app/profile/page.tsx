@@ -286,7 +286,6 @@ export default function ProfilePage() {
       await deleteUser(user);
       
       // 4. Redirect
-      document.cookie = 'sus-session=; Max-Age=0; path=/';
       toast.success('Account permanently deleted. 💀');
       router.push('/');
     } catch (err: any) {
