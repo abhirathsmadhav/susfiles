@@ -21,7 +21,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
   if (loading) {
     return (
       <div className="min-h-screen bg-brutal-black flex flex-col items-center justify-center gap-4">
-        <SusFilesLoader />
+        <SusFilesLoader stage="loading" />
       </div>
     );
   }
