@@ -9,10 +9,10 @@ service firebase.storage {
 
     match /users/{userId}/{allPaths=**} {
       allow read: if true;
-      // Only the user themselves can write to their own folder, must be registered, and file size < 10MB
+      // Only the user themselves can write to their own folder, must be registered, and file size < 50MB
       allow write: if isRegisteredUser() 
                    && request.auth.uid == userId
-                   && request.resource.size < 10 * 1024 * 1024;
+                   && request.resource.size < 50 * 1024 * 1024;
     }
     
     // Deny all other paths by default (or allow read if needed)

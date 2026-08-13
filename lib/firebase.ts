@@ -12,21 +12,17 @@ const firebaseConfig = {
 };
 
 // Firebase Web SDK is client-only — do not initialize on the server.
-// All Firebase usage is inside useEffect / event handlers, so null values
-// on the server are never actually accessed.
-import { getStorage, type FirebaseStorage } from 'firebase/storage';
+// Storage has been replaced by Cloudinary. Only Auth and Firestore remain.
 
 let _app: FirebaseApp | null = null;
 let _auth: Auth | null = null;
 let _db: Firestore | null = null;
-let _storage: FirebaseStorage | null = null;
 
 if (typeof window !== 'undefined') {
   try {
     _app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
     _auth = getAuth(_app);
     _db = getFirestore(_app);
-    _storage = getStorage(_app);
   } catch (e) {
     console.error('[Firebase] Initialization failed:', e);
   }
@@ -34,5 +30,4 @@ if (typeof window !== 'undefined') {
 
 export const auth = _auth as Auth;
 export const db = _db as Firestore;
-export const storage = _storage as FirebaseStorage;
 export default _app;

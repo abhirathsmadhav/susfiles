@@ -6,6 +6,72 @@ import ImageCropper from './ImageCropper';
 
 import { FolderUp, Music, X, Maximize, Square, Monitor, MonitorPlay, Smartphone } from 'lucide-react';
 
+import { compressVideo, compressAudio, MAX_UPLOAD_BYTES, MAX_HARD_LIMIT_BYTES } from '@/lib/compress-media';
+
+/**
+ * Smart lossless-first image compression:
+ * 1. Tries PNG (truly lossless) first — smaller than original for many images
+ * 2. Falls back to WebP starting at quality=1.0 (max), stepping down by 0.01
+ *    per pass — minimum quality reduction to reach target size.
+ */
+async function compressImageToUnder50MB(blob: Blob): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const objectUrl = URL.createObjectURL(blob);
+
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      const ctx = canvas.getContext('2d')!;
+      ctx.drawImage(img, 0, 0);
+
+      // --- Pass 1: Try PNG (truly lossless, no quality loss at all) ---
+      canvas.toBlob((pngResult) => {
+        if (pngResult && pngResult.size < MAX_UPLOAD_BYTES) {
+          resolve(pngResult); // Perfect: lossless and under 50 MB
+          return;
+        }
+
+        // --- Pass 2: WebP at maximum quality, stepping down by 0.01 only if needed ---
+        // quality=1.0 is the highest WebP quality (perceptually lossless for photos)
+        const tryWebP = (quality: number) => {
+          canvas.toBlob(
+            (result) => {
+              if (!result) {
+                reject(new Error('Canvas compression failed.'));
+                return;
+              }
+              if (result.size < MAX_UPLOAD_BYTES) {
+                resolve(result);
+              } else if (quality <= 0.5) {
+                // Even at 50% quality we're still over 50 MB — extremely unlikely
+                // Resolve anyway with the best we can do
+                resolve(result);
+              } else {
+                // Reduce by smallest meaningful step (0.01)
+                tryWebP(parseFloat((quality - 0.01).toFixed(2)));
+              }
+            },
+            'image/webp',
+            quality
+          );
+        };
+
+        tryWebP(1.0); // Start at absolute maximum quality
+      }, 'image/png');
+    };
+
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error('Failed to load image for compression.'));
+    };
+
+    img.src = objectUrl;
+  });
+}
+
 interface UploadZoneProps {
   onUpload: (url: string, aspectRatio?: 'original' | '1:1' | '4:3' | '16:9' | '9:16') => void;
   currentUrl?: string;
@@ -15,6 +81,7 @@ interface UploadZoneProps {
 export default function UploadZone({ onUpload, currentUrl, acceptAudio = true }: UploadZoneProps) {
   const [dragging, setDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadLabel, setUploadLabel] = useState('UPLOADING...');
   const [preview, setPreview] = useState<string>(currentUrl ?? '');
   const [fileType, setFileType] = useState<'image' | 'audio' | 'video'>(
     currentUrl?.match(/\.(mp4|webm|mov)$/i) ? 'video' :
@@ -35,40 +102,105 @@ export default function UploadZone({ onUpload, currentUrl, acceptAudio = true }:
     setProgress(0);
 
     try {
-      const { storage, auth } = await import('@/lib/firebase');
-      const { ref, uploadBytesResumable, getDownloadURL } = await import('firebase/storage');
-
+      // Auth check — still uses Firebase Auth
+      const { auth } = await import('@/lib/firebase');
       if (!auth.currentUser) {
         throw new Error('You must be logged in to upload files.');
       }
 
-      const uid = auth.currentUser.uid;
-      const fileExt = type === 'image' ? 'jpg' : type === 'video' ? 'mp4' : 'mp3';
-      const fileObj = fileToUpload instanceof File ? fileToUpload : new File([fileToUpload], `upload.${fileExt}`, { type: fileToUpload.type || 'application/octet-stream' });
-      const uniqueName = `${Date.now()}_${Math.random().toString(36).substring(2, 9)}.${fileExt}`;
-      const storageRef = ref(storage, `users/${uid}/${uniqueName}`);
+      // --- Hard limit: reject anything above 150 MB immediately ---
+      if (fileToUpload.size > MAX_HARD_LIMIT_BYTES) {
+        throw new Error(
+          `File is ${(fileToUpload.size / 1024 / 1024).toFixed(1)} MB — the maximum allowed size is 150 MB. Please use a smaller file.`
+        );
+      }
 
-      const uploadTask = uploadBytesResumable(storageRef, fileObj);
+      // --- Auto-compress files between 50 MB and 150 MB ---
+      let finalFile: File | Blob = fileToUpload;
 
+      if (fileToUpload.size > MAX_UPLOAD_BYTES) {
+        if (type === 'image') {
+          toast.loading('Image too large — optimizing... ⚙️', { id: 'compress' });
+          finalFile = await compressImageToUnder50MB(fileToUpload);
+          toast.dismiss('compress');
+          toast.success(`Optimized: ${(fileToUpload.size / 1024 / 1024).toFixed(1)} MB → ${(finalFile.size / 1024 / 1024).toFixed(1)} MB ✅`);
+        } else if (type === 'video') {
+          // Load FFmpeg engine first (one-time ~30 MB download, cached by browser)
+          setUploadLabel('LOADING ENGINE...');
+          setProgress(0);
+          finalFile = await compressVideo(fileToUpload, (p) => {
+            setUploadLabel('COMPRESSING...');
+            setProgress(p);
+          });
+          setProgress(0);
+          toast.success(`Video compressed: ${(fileToUpload.size / 1024 / 1024).toFixed(1)} MB → ${(finalFile.size / 1024 / 1024).toFixed(1)} MB ✅`);
+        } else if (type === 'audio') {
+          setUploadLabel('LOADING ENGINE...');
+          setProgress(0);
+          finalFile = await compressAudio(fileToUpload, (p) => {
+            setUploadLabel('COMPRESSING...');
+            setProgress(p);
+          });
+          setProgress(0);
+          toast.success(`Audio compressed: ${(fileToUpload.size / 1024 / 1024).toFixed(1)} MB → ${(finalFile.size / 1024 / 1024).toFixed(1)} MB ✅`);
+        }
+      }
+      setUploadLabel('UPLOADING...');
+      // -------------------------------------------
+
+      // --- Get Cloudinary signed upload credentials from our server ---
+      const sigRes = await fetch('/api/upload');
+      if (!sigRes.ok) throw new Error('Failed to get upload credentials.');
+      const { signature, timestamp, apiKey, cloudName, folder } = await sigRes.json();
+
+      // --- Build FormData for Cloudinary ---
+      const fileExt = type === 'image' ? 'webp' : type === 'video' ? 'mp4' : 'mp3';
+      const fileObj =
+        finalFile instanceof File
+          ? finalFile
+          : new File([finalFile], `upload.${fileExt}`, {
+              type: finalFile.type || 'application/octet-stream',
+            });
+
+      const formData = new FormData();
+      formData.append('file', fileObj);
+      formData.append('api_key', apiKey);
+      formData.append('timestamp', String(timestamp));
+      formData.append('signature', signature);
+      formData.append('folder', folder);
+
+      // --- Upload directly to Cloudinary via XHR (real progress %) ---
+      const resourceType = type === 'image' ? 'image' : 'video'; // Cloudinary uses 'video' for audio too
       const finalUrl = await new Promise<string>((resolve, reject) => {
-        uploadTask.on(
-          'state_changed',
-          (snapshot) => {
-            const currentProgress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-            setProgress(Math.round(currentProgress));
-          },
-          (error) => {
-            reject(error);
-          },
-          async () => {
+        const xhr = new XMLHttpRequest();
+
+        xhr.upload.addEventListener('progress', (e) => {
+          if (e.lengthComputable) {
+            setProgress(Math.round((e.loaded / e.total) * 100));
+          }
+        });
+
+        xhr.onload = () => {
+          if (xhr.status === 200) {
+            const data = JSON.parse(xhr.responseText);
+            resolve(data.secure_url as string);
+          } else {
             try {
-              const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-              resolve(downloadURL);
-            } catch (err) {
-              reject(err);
+              const err = JSON.parse(xhr.responseText);
+              reject(new Error(err?.error?.message || 'Upload failed.'));
+            } catch {
+              reject(new Error('Upload failed.'));
             }
           }
+        };
+
+        xhr.onerror = () => reject(new Error('Network error during upload.'));
+
+        xhr.open(
+          'POST',
+          `https://api.cloudinary.com/v1_1/${cloudName}/${resourceType}/upload`
         );
+        xhr.send(formData);
       });
 
       setPreview(finalUrl);
@@ -82,10 +214,12 @@ export default function UploadZone({ onUpload, currentUrl, acceptAudio = true }:
     } finally {
       setTimeout(() => {
         setUploading(false);
+        setUploadLabel('UPLOADING...');
         setProgress(0);
       }, 600);
     }
   };
+
 
   const handleFile = useCallback(
     async (file: File) => {
@@ -160,14 +294,16 @@ export default function UploadZone({ onUpload, currentUrl, acceptAudio = true }:
 
         {uploading ? (
           <div className="text-center">
-            <div className="font-brutal text-lg mb-2">UPLOADING...</div>
+            <div className="font-brutal text-lg mb-2">{uploadLabel}</div>
             <div className="w-48 h-3 border-[2px] border-black bg-white overflow-hidden">
               <div
                 className="h-full bg-acid-yellow transition-all duration-300"
                 style={{ width: `${progress}%` }}
               />
             </div>
-            <div className="font-mono text-xs mt-1">{progress}%</div>
+            <div className="font-mono text-xs mt-1">
+              {uploadLabel === 'LOADING ENGINE...' ? 'one-time download ~30 MB' : `${progress}%`}
+            </div>
           </div>
         ) : (
           <>
@@ -180,6 +316,9 @@ export default function UploadZone({ onUpload, currentUrl, acceptAudio = true }:
               </p>
               <p className="text-xs opacity-60 mt-1 font-mono">
                 or click to pick a file · JPG, PNG, WEBP {acceptAudio && ', MP3, MP4'}
+              </p>
+              <p className="text-xs mt-1 font-mono" style={{ color: '#FF2D78' }}>
+                Max 150 MB · Auto-compressed if over 50 MB
               </p>
             </div>
           </>
