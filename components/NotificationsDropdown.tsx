@@ -72,16 +72,29 @@ export default function NotificationsDropdown() {
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            initial={{ opacity: 0, y: -10 }}
+            initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="absolute right-0 top-full mt-2 w-72 md:w-80 panel-brutal bg-white z-[200] max-h-[70vh] overflow-y-auto"
-            style={{ padding: '0' }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.15 }}
+            className={[
+              // Mobile: fixed full-width panel anchored below the top header
+              'fixed left-2 right-2 top-[64px]',
+              // Desktop: regular absolute dropdown anchored to the bell button
+              'md:absolute md:fixed-auto md:left-auto md:right-0 md:top-full md:mt-2 md:w-80',
+              'panel-brutal bg-white z-[300] max-h-[70vh] overflow-y-auto',
+            ].join(' ')}
+            style={{ padding: 0 }}
           >
             <div className="p-3 border-b-[2px] border-black bg-acid-yellow flex justify-between items-center">
               <h3 className="font-brutal text-sm">NOTIFICATIONS</h3>
+              <button
+                onClick={() => setIsOpen(false)}
+                className="font-brutal text-xs px-2 py-1 border-[2px] border-black bg-white hover:bg-black hover:text-white transition-colors"
+              >
+                ✕
+              </button>
             </div>
-            
+
             {notifications.length === 0 ? (
               <div className="p-6 text-center opacity-50 font-mono text-xs">
                 No alerts on your radar.
@@ -89,8 +102,8 @@ export default function NotificationsDropdown() {
             ) : (
               <div className="flex flex-col">
                 {notifications.slice(0, 50).map((n, i) => (
-                  <div 
-                    key={n.id} 
+                  <div
+                    key={n.id}
                     className={`p-3 text-sm font-mono leading-tight border-b-[2px] border-black hover:bg-black/5 transition-colors ${!n.read ? 'bg-acid-yellow/20' : ''} ${i === notifications.length - 1 ? 'border-b-0' : ''}`}
                   >
                     <span className="opacity-80">{n.message}</span>
@@ -101,6 +114,7 @@ export default function NotificationsDropdown() {
           </motion.div>
         )}
       </AnimatePresence>
+
     </div>
   );
 }
